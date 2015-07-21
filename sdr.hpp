@@ -143,6 +143,18 @@ struct bank
         return result;
     }
 
+    // find amount of matching bits between two vectors
+    double weighted_similarity(const position_t a, const position_t b, const std::array<double, Width> & weights) const
+    {
+        double result = 0;
+
+        for(position_t pos : storage[a].positions) {
+            result += bitmap[pos].count(b) * weights[pos];
+        }
+
+        return result;
+    }
+
     // find similarity of one object compared to the OR'd result of a list of objects
     std::size_t union_similarity(const position_t pos, const std::vector<position_t> & positions) const
     {
@@ -158,6 +170,26 @@ struct bank
 
         for(const position_t cmp : storage[pos].positions) {
             result += punions[cmp];
+        }
+
+        return result;
+    }
+
+    // find similarity of one object compared to the OR'd result of a list of objects
+    double weighted_union_similarity(const position_t pos, const std::vector<position_t> & positions, const std::array<double, Width> & weights) const
+    {
+        std::bitset<Width> punions;
+
+        for(const position_t ppos : positions) {
+            for(const position_t spos : storage[ppos].positions) {
+                punions.set(spos);
+            }
+        }
+
+        double result = 0;
+
+        for(const position_t cmp : storage[pos].positions) {
+            result += punions[cmp] * weights[cmp];
         }
 
         return result;
@@ -226,6 +258,28 @@ struct bank
 
                 for(const std::size_t m : data) {
                     amount_matching += bitmap[m].count(pos);
+                }
+
+                if(amount_matching >= amount) {
+                    matching.insert(pos);
+                }
+            }
+        }
+
+        return std::vector<position_t>(matching.begin(), matching.end());
+    }
+
+    // has to match amount in data
+    std::vector<position_t> weighted_matching(const std::vector<position_t> & data, const double amount, const std::array<double, Width> & weights) const
+    {
+        std::unordered_set<position_t> matching;
+
+        for(const std::size_t item : data) {
+            for(const std::size_t pos : bitmap[item]) {
+                double amount_matching = 0;
+
+                for(const std::size_t m : data) {
+                    amount_matching += bitmap[m].count(pos) * weights[m];
                 }
 
                 if(amount_matching >= amount) {
