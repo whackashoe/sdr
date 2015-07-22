@@ -1,10 +1,6 @@
 #include <chrono>
 #include <iostream>
 #include <random>
-
-// this currently is waaay slower when Width=4096 and OnPercent = 0.02
-//#define USE_SHERWOOD
-
 #include "sdr.hpp"
 
 
