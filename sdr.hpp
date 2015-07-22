@@ -202,8 +202,8 @@ struct bank
         const auto partial_amount = ((amount >= idx.size()) ? idx.size() : amount);
 
         std::partial_sort(idx.begin(), idx.begin() + partial_amount, idx.end(), [&](
-            const unsigned a,
-            const unsigned b
+            const position_t a,
+            const position_t b
         ) {
             return v[a] > v[b];
         });
@@ -244,8 +244,8 @@ struct bank
         const auto partial_amount = ((amount >= idx.size()) ? idx.size() : amount);
 
         std::partial_sort(idx.begin(), idx.begin() + partial_amount, idx.end(), [&](
-            const double a,
-            const double b
+            const position_t a,
+            const position_t b
         ) {
             return v[a] > v[b];
         });
