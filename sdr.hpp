@@ -15,8 +15,11 @@
 namespace sdr
 {
 
+
 typedef std::size_t position_t;
 typedef std::size_t width_t;
+
+
 
 // this holds all of the traits for a single concept
 // ie - if width is 1024, this could hold up to 1024 values between 0 and 1024
@@ -29,8 +32,7 @@ struct concept
     {}
 
     // otherwise we assume that is hasn't, thus we only add non zero fields
-    template <typename T>
-    concept(const T & input) : data()
+    template <typename T> concept(const T & input) : data()
     {
         for(std::size_t i=0; i < input.size(); ++i) {
             if(input[i]) {
@@ -41,8 +43,9 @@ struct concept
 };
 
 
-template <width_t Width>
-struct node
+// represents a concept in storage
+// designed to be able to be quickly queried and modified
+template <width_t Width> struct node
 {
     // store the positions of all set bits from 0 -> width
     std::unordered_set<position_t> positions;
@@ -74,8 +77,9 @@ struct node
     }
 };
 
-template <width_t Width>
-struct bank
+
+// this is the memory bank for the sdr memory unit
+template <width_t Width> struct bank
 {
     // all inputs we have ever received, we store here compressed into storage
     std::vector<node<Width>> storage;
