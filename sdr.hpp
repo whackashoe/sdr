@@ -200,30 +200,83 @@ struct bank
     // second refers to matching number of bits
     std::vector<std::pair<position_t, std::size_t>> closest(const position_t pos, const std::size_t amount) const
     {
-        hashtable_t<position_t, std::size_t> matching_m;
+        std::vector<position_t> idx(storage.size());
+        std::vector<unsigned>     v(storage.size());
 
+        std::iota(idx.begin(), idx.end(), 0);
+
+        // count matching bits for each
         for(const position_t spos : storage[pos].positions) {
             for(const position_t bpos : bitmap[spos]) {
-                ++matching_m[bpos];
+                ++v[bpos];
             }
         }
 
-        // we dont care about ourselves
-        matching_m.erase(pos);
+        // we dont care about our self similarity
+        v[pos] = 0;
 
-        std::vector<std::pair<position_t, std::size_t>> matching_v(matching_m.begin(), matching_m.end());
-        std::cout << "matching_v.size() => " << matching_v.size() << std::endl;
+        // if there are less than amount in storage, just return amount that exist
+        const auto partial_amount = ((amount >= idx.size()) ? idx.size() : amount);
 
-        const auto partial_end = matching_v.begin() + ((amount >= matching_v.size()) ? matching_v.size() : amount);
-
-        std::partial_sort(matching_v.begin(), partial_end, matching_v.end(), [](
-            const std::pair<position_t, std::size_t> a,
-            const std::pair<position_t, std::size_t> b
+        std::partial_sort(idx.begin(), idx.begin() + partial_amount, idx.end(), [&](
+            const unsigned a,
+            const unsigned b
         ) {
-            return (a.second) > (b.second);
+            return v[a] > v[b];
         });
 
-        return std::vector<std::pair<position_t, std::size_t>>(matching_v.begin(), partial_end);
+        // create std::pair for result
+        std::vector<std::pair<position_t, std::size_t>> ret;
+        ret.reserve(partial_amount);
+
+        for(std::size_t i=0; i<partial_amount; ++i) {
+            const auto m = idx[i];
+            ret.push_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
+        }
+
+        return ret;
+    }
+
+    // find most similar to object at pos
+    // first refers to position
+    // second refers to matching number of bits
+    std::vector<std::pair<position_t, double>> weighted_closest(const position_t pos, const std::size_t amount, const std::array<double, Width> & weights) const
+    {
+        std::vector<position_t> idx(storage.size());
+        std::vector<double>       v(storage.size());
+
+        std::iota(idx.begin(), idx.end(), 0);
+
+        // count matching bits for each
+        for(const position_t spos : storage[pos].positions) {
+            for(const position_t bpos : bitmap[spos]) {
+                v[bpos] += weights[spos];
+            }
+        }
+
+        // we dont care about our self similarity
+        v[pos] = 0.0;
+
+        // if there are less than amount in storage, just return amount that exist
+        const auto partial_amount = ((amount >= idx.size()) ? idx.size() : amount);
+
+        std::partial_sort(idx.begin(), idx.begin() + partial_amount, idx.end(), [&](
+            const double a,
+            const double b
+        ) {
+            return v[a] > v[b];
+        });
+
+        // create std::pair for result
+        std::vector<std::pair<position_t, double>> ret;
+        ret.reserve(partial_amount);
+
+        for(std::size_t i=0; i<partial_amount; ++i) {
+            const auto m = idx[i];
+            ret.push_back(std::make_pair(m, v[m]));
+        }
+
+        return ret;
     }
 
     // return all items matching all in data
