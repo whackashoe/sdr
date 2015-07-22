@@ -18,20 +18,27 @@ namespace sdr
 typedef std::size_t position_t;
 typedef std::size_t width_t;
 
-
-template <width_t Width>
-std::vector<position_t> field_to_list(const std::bitset<Width> & data)
+// this holds all of the traits for a single concept
+// ie - if width is 1024, this could hold up to 1024 values between 0 and 1024
+struct concept
 {
-    std::vector<position_t> positions;
+    std::vector<position_t> data;
 
-    for(std::size_t i=0; i<Width; ++i) {
-        if(data[i]) {
-            positions.push_back(i);
+    // for vector of positions we assume the data has already been dealt with
+    concept(const std::vector<position_t> & input) : data(input)
+    {}
+
+    // otherwise we assume that is hasn't, thus we only add non zero fields
+    template <typename T>
+    concept(const T & input) : data()
+    {
+        for(std::size_t i=0; i < input.size(); ++i) {
+            if(input[i]) {
+                data.push_back(i);
+            }
         }
     }
-
-    return positions;
-}
+};
 
 
 template <width_t Width>
@@ -40,12 +47,12 @@ struct node
     // store the positions of all set bits from 0 -> width
     std::unordered_set<position_t> positions;
 
-    node(const std::vector<position_t> & data) : positions(data.begin(), data.end())
+    node(const concept & concept) : positions(concept.data.begin(), concept.data.end())
     {}
 
-    void fill(const std::vector<position_t> & data)
+    void fill(const concept & concept)
     {
-        std::copy(data.begin(), data.end(), std::inserter(positions, positions.begin()));
+        std::copy(concept.data.begin(), concept.data.end(), std::inserter(positions, positions.begin()));
     }
 
     void clear()
@@ -84,20 +91,20 @@ struct bank
         storage[pos].print();
     }
 
-    position_t insert(const std::vector<position_t> & data)
+    position_t insert(const concept & concept)
     {
-        storage.push_back(node<Width>(data));
+        storage.push_back(node<Width>(concept));
 
         const position_t last_pos = storage.size() - 1;
 
-        for(position_t pos : data) {
+        for(position_t pos : concept.data) {
             bitmap[pos].insert(last_pos);
         }
 
         return last_pos;
     }
 
-    void update(const position_t pos, const std::vector<position_t> & data)
+    void update(const position_t pos, const concept & concept)
     {
         node<Width> & node = storage[pos];
 
@@ -107,7 +114,7 @@ struct bank
 
         node.clear();
 
-        node.fill(data);
+        node.fill(concept);
 
         for(position_t p : node.positions) {
             bitmap[p].insert(pos);
@@ -263,13 +270,13 @@ struct bank
     }
 
     // return all items matching all in data
-    std::vector<position_t> matching(const std::vector<position_t> & data) const
+    std::vector<position_t> matching(const concept & concept) const
     {
         std::unordered_set<position_t> matching;
 
-        for(const std::size_t item : data) {
+        for(const std::size_t item : concept.data) {
             for(const std::size_t pos : bitmap[item]) {
-                for(const std::size_t m : data) {
+                for(const std::size_t m : concept.data) {
                     if(bitmap[m].count(pos) == 0) {
                         goto skip;
                     }
@@ -284,15 +291,15 @@ struct bank
     }
 
     // has to match amount in data
-    std::vector<position_t> matching(const std::vector<position_t> & data, const std::size_t amount) const
+    std::vector<position_t> matching(const concept & concept, const std::size_t amount) const
     {
         std::unordered_set<position_t> matching;
 
-        for(const std::size_t item : data) {
+        for(const std::size_t item : concept.data) {
             for(const std::size_t pos : bitmap[item]) {
                 std::size_t amount_matching = 0;
 
-                for(const std::size_t m : data) {
+                for(const std::size_t m : concept.data) {
                     amount_matching += bitmap[m].count(pos);
                 }
 
