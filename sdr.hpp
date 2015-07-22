@@ -9,31 +9,14 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
-#include <unordered_map>
 #include <unordered_set>
 
-
-#ifdef USE_SHERWOOD
-#include "sherwood_map.hpp"
-#endif
 
 namespace sdr
 {
 
 typedef std::size_t position_t;
 typedef std::size_t width_t;
-
-#ifdef USE_SHERWOOD
-template<typename K, typename V, typename H = std::hash<K>, typename E = std::equal_to<K>,typename A = std::allocator<std::pair<K, V> > >
-using thin_sherwood_map = sherwood_map<K, V, H, E, A>;
-
-template<typename K, typename V>
-using hashtable_t = thin_sherwood_map<K, V>;
-#else
-template<typename K, typename V>
-using hashtable_t = std::unordered_map<K, V>;
-#endif
-
 
 
 template <width_t Width>
