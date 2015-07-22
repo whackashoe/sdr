@@ -23,6 +23,7 @@ typedef std::size_t width_t;
 
 // this holds all of the traits for a single concept
 // ie - if width is 1024, this could hold up to 1024 values between 0 and 1024
+// designed to be fast to create, pass around, and as util to compress sparse data
 struct concept
 {
     std::vector<position_t> data;
@@ -45,12 +46,12 @@ struct concept
 
 // represents a concept in storage
 // designed to be able to be quickly queried and modified
-template <width_t Width> struct node
+struct storage_concept
 {
     // store the positions of all set bits from 0 -> width
     std::unordered_set<position_t> positions;
 
-    node(const concept & concept) : positions(concept.data.begin(), concept.data.end())
+    storage_concept(const concept & concept) : positions(concept.data.begin(), concept.data.end())
     {}
 
     void fill(const concept & concept)
@@ -63,17 +64,10 @@ template <width_t Width> struct node
         positions.clear();
     }
 
-    void print() const
+    // conversion to concept via cast
+    operator concept() const
     {
-        const std::size_t sroot = std::sqrt(Width);
-
-        for(std::size_t y=0; y < sroot; ++y) {
-            for(std::size_t x=0; x < sroot; ++x) {
-                std::cout << (positions.count((y * sroot) + x) ? '1' : '0');
-            }
-
-            std::cout << std::endl;
-        }
+        return concept(std::vector<position_t>(positions.begin(), positions.end()));
     }
 };
 
@@ -82,7 +76,7 @@ template <width_t Width> struct node
 template <width_t Width> struct bank
 {
     // all inputs we have ever received, we store here compressed into storage
-    std::vector<node<Width>> storage;
+    std::vector<storage_concept> storage;
 
     // this holds our sets of vectors for easy comparison of different objects in storage
     std::array<std::unordered_set<position_t>, Width> bitmap;
@@ -90,14 +84,9 @@ template <width_t Width> struct bank
     bank() : storage(), bitmap()
     {}
 
-    void print(const position_t pos) const
-    {
-        storage[pos].print();
-    }
-
     position_t insert(const concept & concept)
     {
-        storage.push_back(node<Width>(concept));
+        storage.push_back(storage_concept(concept));
 
         const position_t last_pos = storage.size() - 1;
 
@@ -110,17 +99,17 @@ template <width_t Width> struct bank
 
     void update(const position_t pos, const concept & concept)
     {
-        node<Width> & node = storage[pos];
+        storage_concept & storage_concept = storage[pos];
 
-        for(position_t i : node.positions) {
+        for(position_t i : storage_concept.positions) {
             bitmap[i].erase(pos);
         }
 
-        node.clear();
+        storage_concept.clear();
 
-        node.fill(concept);
+        storage_concept.fill(concept);
 
-        for(position_t p : node.positions) {
+        for(position_t p : storage_concept.positions) {
             bitmap[p].insert(pos);
         }
     }
