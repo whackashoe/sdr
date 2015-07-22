@@ -74,6 +74,23 @@ int main()
     }
 
     {
+        auto start = since_epoch();
+
+        std::array<double, Width> weights;
+        std::fill(weights.begin(), weights.end(), 1.1);
+        auto closest = memory.weighted_closest(0, 10, weights);
+
+        auto end = since_epoch();
+
+        std::cout << "finding weighted closest took: " << (end-start) << "ms" << std::endl;
+
+        std::cout << "closest: " << std::endl;
+        for(auto & it : closest) {
+            std::cout << "\t" << it.first << "\t:: " << it.second << std::endl;
+        }
+    }
+
+    {
         std::vector<std::size_t> simlist(10);
         std::iota(simlist.begin(), simlist.end(), 1);
 
