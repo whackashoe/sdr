@@ -11,6 +11,7 @@
 #include <cmath>
 #include <unordered_set>
 #include <future>
+#include <thread>
 
 
 namespace sdr
@@ -34,12 +35,35 @@ struct concept
     {}
 
     // otherwise we assume that is hasn't, thus we only add non zero fields
-    template <typename T> concept(const T & input) : data()
+    template <width_t W> concept(const std::bitset<W> & input) : data()
     {
         for(std::size_t i=0; i < input.size(); ++i) {
             if(input[i]) {
                 data.push_back(i);
             }
+        }
+    }
+
+    // store [amount] largest ones from input
+    template <typename T, width_t W> concept(const std::array<T, W> & input, const std::size_t amount) : data()
+    {
+        std::vector<position_t> idx(input.size());
+        std::iota(idx.begin(), idx.end(), 0);
+
+        std::partial_sort(idx.begin(), idx.begin() + amount, idx.end(), [&](
+            const T a,
+            const T b
+        ) {
+            return input[a] > input[b];
+        });
+
+        for(std::size_t i=0; i < amount; ++i) {
+            // end if value is 0
+            if(! input[idx[i]]) {
+                break;
+            }
+
+            data.push_back(idx[i]);
         }
     }
 };
