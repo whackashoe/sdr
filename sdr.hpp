@@ -10,6 +10,7 @@
 #include <iostream>
 #include <cmath>
 #include <unordered_set>
+#include <future>
 
 
 namespace sdr
@@ -220,6 +221,11 @@ template <width_t Width> struct bank
         return ret;
     }
 
+    std::future<std::vector<std::pair<position_t, std::size_t>>> async_closest(const position_t pos, const std::size_t amount) const
+    {
+        return std::async(std::launch::async, &bank<Width>::closest, this, pos, amount);
+    }
+
     // find most similar to object at pos
     // first refers to position
     // second refers to matching number of bits
@@ -260,6 +266,11 @@ template <width_t Width> struct bank
         }
 
         return ret;
+    }
+
+    std::future<std::vector<std::pair<position_t, std::size_t>>> async_weighted_closest(const position_t pos, const std::size_t amount, const std::array<double, Width> & weights) const
+    {
+        return std::async(std::launch::async, &bank<Width>::weighted_closest, this, pos, amount, weights);
     }
 
     // return all items matching all in data

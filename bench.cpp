@@ -13,7 +13,8 @@ std::size_t since_epoch()
 int main()
 {
     constexpr std::size_t Amount = 100000;
-    constexpr std::size_t Width = 4096;
+    constexpr std::size_t Width = 2048;
+    constexpr std::size_t ParallelAmount = 100;
     constexpr float OnPercent = 0.02;
 
     sdr::bank<Width> memory;
@@ -58,15 +59,31 @@ int main()
     {
         auto start = since_epoch();
 
-        auto closest = memory.closest(0, 10);
+        std::vector<std::future<std::vector<std::pair<sdr::position_t, std::size_t>>>> futures;
+
+        for(sdr::position_t i=0; i < ParallelAmount; ++i) {
+            futures.push_back(memory.async_closest(i, 10));
+        }
+
+        std::vector<std::vector<std::pair<sdr::position_t, std::size_t>>> closests;
+        for(sdr::position_t i=0; i < ParallelAmount; ++i) {
+            closests.push_back(futures[i].get());
+        }
 
         auto end = since_epoch();
 
-        std::cout << "finding closest took: " << (end-start) << "ms" << std::endl;
+        std::cout << "finding closest (parallel => " << ParallelAmount << ") took: " << (end-start) << "ms" << std::endl;
 
-        std::cout << "closest: " << std::endl;
-        for(auto & it : closest) {
-            std::cout << "\t" << it.first << "\t:: " << it.second << std::endl;
+        std::size_t counter = 0;
+        for(auto & closest : closests) {
+            std::cout << "\t#" << counter << std::endl;
+
+            for(auto & it : closest) {
+                std::cout << "\t\t" << it.first << "\t:: " << it.second << std::endl;
+            }
+
+            std::cout << std::endl;
+            ++counter;
         }
     }
 
