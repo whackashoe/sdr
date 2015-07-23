@@ -113,7 +113,7 @@ template <width_t Width> struct bank
     {
         storage.push_back(storage_concept(concept));
 
-        const position_t last_pos = storage.size() - 1;
+        const position_t last_pos { storage.size() - 1 };
 
         for(position_t pos : concept.data) {
             bitmap[pos].insert(last_pos);
@@ -124,7 +124,7 @@ template <width_t Width> struct bank
 
     void update(const position_t pos, const concept & concept)
     {
-        storage_concept & storage_concept = storage[pos];
+        storage_concept & storage_concept { storage[pos] };
 
         for(position_t i : storage_concept.positions) {
             bitmap[i].erase(pos);
@@ -142,7 +142,7 @@ template <width_t Width> struct bank
     // find amount of matching bits between two vectors
     std::size_t similarity(const position_t a, const position_t b) const
     {
-        std::size_t result = 0;
+        std::size_t result { 0 };
 
         for(position_t pos : storage[a].positions) {
             result += bitmap[pos].count(b);
@@ -154,7 +154,7 @@ template <width_t Width> struct bank
     // find amount of matching bits between two vectors
     double weighted_similarity(const position_t a, const position_t b, const std::array<double, Width> & weights) const
     {
-        double result = 0;
+        double result { 0 };
 
         for(position_t pos : storage[a].positions) {
             result += bitmap[pos].count(b) * weights[pos];
@@ -174,7 +174,7 @@ template <width_t Width> struct bank
             }
         }
 
-        std::size_t result = 0;
+        std::size_t result { 0 };
 
         for(const position_t cmp : storage[pos].positions) {
             result += punions[cmp];
@@ -194,7 +194,7 @@ template <width_t Width> struct bank
             }
         }
 
-        double result = 0;
+        double result { 0 };
 
         for(const position_t cmp : storage[pos].positions) {
             result += punions[cmp] * weights[cmp];
@@ -211,6 +211,9 @@ template <width_t Width> struct bank
         std::vector<position_t> idx(storage.size());
         std::vector<unsigned>     v(storage.size());
 
+        // if there are less than amount in storage, just return amount that exist
+        const std::size_t partial_amount { (amount >= idx.size()) ? idx.size() : amount };
+
         std::iota(std::begin(idx), std::end(idx), 0);
 
         // count matching bits for each
@@ -222,9 +225,6 @@ template <width_t Width> struct bank
 
         // we dont care about our self similarity
         v[pos] = 0;
-
-        // if there are less than amount in storage, just return amount that exist
-        const auto partial_amount = ((amount >= idx.size()) ? idx.size() : amount);
 
         std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
             const position_t a,
@@ -238,7 +238,7 @@ template <width_t Width> struct bank
         ret.reserve(partial_amount);
 
         for(std::size_t i=0; i<partial_amount; ++i) {
-            const auto m = idx[i];
+            const position_t m { idx[i] };
             ret.push_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
         }
 
@@ -258,6 +258,9 @@ template <width_t Width> struct bank
         std::vector<position_t> idx(storage.size());
         std::vector<double>       v(storage.size());
 
+        // if there are less than amount in storage, just return amount that exist
+        const std::size_t partial_amount { (amount >= idx.size()) ? idx.size() : amount };
+
         std::iota(std::begin(idx), std::end(idx), 0);
 
         // count matching bits for each
@@ -269,9 +272,6 @@ template <width_t Width> struct bank
 
         // we dont care about our self similarity
         v[pos] = 0.0;
-
-        // if there are less than amount in storage, just return amount that exist
-        const auto partial_amount = ((amount >= idx.size()) ? idx.size() : amount);
 
         std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
             const position_t a,
@@ -285,7 +285,7 @@ template <width_t Width> struct bank
         ret.reserve(partial_amount);
 
         for(std::size_t i=0; i<partial_amount; ++i) {
-            const auto m = idx[i];
+            const position_t m { idx[i] };
             ret.push_back(std::make_pair(m, v[m]));
         }
 
@@ -315,7 +315,7 @@ template <width_t Width> struct bank
             }
         }
 
-        return std::vector<position_t>(std::begin(matching), std::end(matching));
+        return { std::begin(matching), std::end(matching) };
     }
 
     // has to match amount in data
@@ -325,7 +325,7 @@ template <width_t Width> struct bank
 
         for(const std::size_t item : concept.data) {
             for(const std::size_t pos : bitmap[item]) {
-                std::size_t amount_matching = 0;
+                std::size_t amount_matching { 0 };
 
                 for(const std::size_t m : concept.data) {
                     amount_matching += bitmap[m].count(pos);
@@ -337,7 +337,7 @@ template <width_t Width> struct bank
             }
         }
 
-        return std::vector<position_t>(std::begin(matching), std::begin(matching));
+        return { std::begin(matching), std::begin(matching) };
     }
 
     // has to match amount in data
@@ -347,7 +347,7 @@ template <width_t Width> struct bank
 
         for(const std::size_t item : data) {
             for(const std::size_t pos : bitmap[item]) {
-                double amount_matching = 0;
+                double amount_matching { 0 };
 
                 for(const std::size_t m : data) {
                     amount_matching += bitmap[m].count(pos) * weights[m];
@@ -359,7 +359,7 @@ template <width_t Width> struct bank
             }
         }
 
-        return std::vector<position_t>(std::begin(matching), std::end(matching));
+        return { std::begin(matching), std::end(matching) };
     }
 };
 
