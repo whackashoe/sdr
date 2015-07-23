@@ -48,9 +48,9 @@ struct concept
     template <typename T, width_t W> concept(const std::array<T, W> & input, const std::size_t amount) : data()
     {
         std::vector<position_t> idx(input.size());
-        std::iota(idx.begin(), idx.end(), 0);
+        std::iota(std::begin(idx), std::end(idx), 0);
 
-        std::partial_sort(idx.begin(), idx.begin() + amount, idx.end(), [&](
+        std::partial_sort(std::begin(idx), std::begin(idx) + amount, std::end(idx), [&](
             const T a,
             const T b
         ) {
@@ -76,12 +76,12 @@ struct storage_concept
     // store the positions of all set bits from 0 -> width
     std::unordered_set<position_t> positions;
 
-    storage_concept(const concept & concept) : positions(concept.data.begin(), concept.data.end())
+    storage_concept(const concept & concept) : positions(std::begin(concept.data), std::end(concept.data))
     {}
 
     void fill(const concept & concept)
     {
-        std::copy(concept.data.begin(), concept.data.end(), std::inserter(positions, positions.begin()));
+        std::copy(std::begin(concept.data), std::end(concept.data), std::inserter(positions, std::begin(positions)));
     }
 
     void clear()
@@ -92,7 +92,7 @@ struct storage_concept
     // conversion to concept via cast
     operator concept() const
     {
-        return concept(std::vector<position_t>(positions.begin(), positions.end()));
+        return concept(std::vector<position_t>(std::begin(positions), std::end(positions)));
     }
 };
 
@@ -211,7 +211,7 @@ template <width_t Width> struct bank
         std::vector<position_t> idx(storage.size());
         std::vector<unsigned>     v(storage.size());
 
-        std::iota(idx.begin(), idx.end(), 0);
+        std::iota(std::begin(idx), std::end(idx), 0);
 
         // count matching bits for each
         for(const position_t spos : storage[pos].positions) {
@@ -226,7 +226,7 @@ template <width_t Width> struct bank
         // if there are less than amount in storage, just return amount that exist
         const auto partial_amount = ((amount >= idx.size()) ? idx.size() : amount);
 
-        std::partial_sort(idx.begin(), idx.begin() + partial_amount, idx.end(), [&](
+        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
             const position_t a,
             const position_t b
         ) {
@@ -258,7 +258,7 @@ template <width_t Width> struct bank
         std::vector<position_t> idx(storage.size());
         std::vector<double>       v(storage.size());
 
-        std::iota(idx.begin(), idx.end(), 0);
+        std::iota(std::begin(idx), std::end(idx), 0);
 
         // count matching bits for each
         for(const position_t spos : storage[pos].positions) {
@@ -273,7 +273,7 @@ template <width_t Width> struct bank
         // if there are less than amount in storage, just return amount that exist
         const auto partial_amount = ((amount >= idx.size()) ? idx.size() : amount);
 
-        std::partial_sort(idx.begin(), idx.begin() + partial_amount, idx.end(), [&](
+        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
             const position_t a,
             const position_t b
         ) {
@@ -315,7 +315,7 @@ template <width_t Width> struct bank
             }
         }
 
-        return std::vector<position_t>(matching.begin(), matching.end());
+        return std::vector<position_t>(std::begin(matching), std::end(matching));
     }
 
     // has to match amount in data
@@ -337,7 +337,7 @@ template <width_t Width> struct bank
             }
         }
 
-        return std::vector<position_t>(matching.begin(), matching.end());
+        return std::vector<position_t>(std::begin(matching), std::begin(matching));
     }
 
     // has to match amount in data
@@ -359,7 +359,7 @@ template <width_t Width> struct bank
             }
         }
 
-        return std::vector<position_t>(matching.begin(), matching.end());
+        return std::vector<position_t>(std::begin(matching), std::end(matching));
     }
 };
 
