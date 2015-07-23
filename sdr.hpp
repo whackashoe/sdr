@@ -100,13 +100,14 @@ struct storage_concept
 // this is the memory bank for the sdr memory unit
 template <width_t Width> struct bank
 {
-    // all inputs we have ever received, we store here compressed into storage
-    std::vector<storage_concept> storage;
-
     // this holds our sets of vectors for easy comparison of different objects in storage
     std::array<std::unordered_set<position_t>, Width> bitmap;
 
-    bank() : storage(), bitmap()
+    // all inputs we have ever received, we store here compressed into storage
+    std::vector<storage_concept> storage;
+
+
+    bank() : bitmap(), storage()
     {}
 
     position_t insert(const concept & concept)
