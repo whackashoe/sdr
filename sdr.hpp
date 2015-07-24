@@ -12,6 +12,8 @@
 #include <unordered_set>
 #include <future>
 #include <thread>
+#include <fstream>
+#include <cstdint>
 
 
 namespace sdr
@@ -20,6 +22,9 @@ namespace sdr
 
 typedef std::size_t position_t;
 typedef std::size_t width_t;
+
+constexpr std::uint32_t F_PREFIX  { 0x5D };
+constexpr std::uint32_t F_VERSION { 0x01 };
 
 
 
@@ -109,6 +114,101 @@ template <width_t Width> struct bank
 
     bank() : bitmap(), storage()
     {}
+
+    bool save_to_file(const std::string & src) const
+    {
+        std::ofstream ofs(src, std::ios::out | std::ios::binary);
+
+        if(! ofs) {
+            return false;
+        }
+
+        auto write = [&](std::uint32_t ref) {
+            ofs.write(reinterpret_cast<char*>(&ref), sizeof(std::uint32_t));
+        };
+
+        // prefix
+        write(F_PREFIX);
+
+        // version
+        write(F_VERSION);
+
+        // width
+        write(static_cast<std::uint32_t>(Width));
+
+        //storage
+        write(static_cast<std::uint32_t>(storage.size()));
+        for(auto & item : storage) {
+            write(static_cast<std::uint32_t>(item.positions.size()));
+
+            for(auto & i : item.positions) {
+                write(static_cast<std::uint32_t>(i));
+            }
+        }
+
+
+        ofs.close();
+
+        return true;
+    }
+
+    std::size_t load_from_file(const std::string & src)
+    {
+        std::ifstream ifs(src, std::ios::binary);
+        if(! ifs) {
+            return false;
+        }
+
+        auto read = [&]() -> std::uint32_t {
+            std::uint32_t v;
+            ifs.read(reinterpret_cast<char*>(&v), sizeof(std::uint32_t));
+            return v;
+        };
+
+        // prefix
+        const std::uint32_t prefix { read() };
+
+        if(prefix != F_PREFIX) {
+            std::cerr << "this is not a sdr file" << std::endl;
+            return false;
+        }
+
+
+        // version
+        const std::uint32_t version { read() };
+
+        if(version != F_VERSION) {
+            std::cerr << "wrong version. found:" << version << " expected: " << F_VERSION << std::endl;
+            return false;
+        }
+
+
+        // width
+        const std::uint32_t width { read() };
+
+        if(width != Width) {
+            std::cout << "wrong width. found: " << width  << " expected: " << Width << std::endl;
+            return false;
+        }
+
+        // storage
+        const std::size_t storage_size { read() };
+
+        for(std::size_t i=0; i < storage_size; ++i) {
+            const std::size_t size { static_cast<std::size_t>(read()) };
+
+
+            std::vector<position_t> positions;
+
+            for(std::size_t j=0; j < size; ++j) {
+                positions.push_back(static_cast<position_t>(read()));
+            }
+
+            insert(concept(positions));
+        }
+
+        return storage_size;
+    }
 
     position_t insert(const concept & concept)
     {
