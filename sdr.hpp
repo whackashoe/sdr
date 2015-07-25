@@ -360,6 +360,20 @@ public:
         }
     }
 
+    void clear()
+    {
+        storage.clear();
+
+        for(auto & i : bitmap) {
+            i.clear();
+        }
+    }
+
+    std::size_t storage_size() const
+    {
+        return storage.size();
+    }
+
     // find amount of matching bits between two vectors
     std::size_t similarity(
         const position_t a,
