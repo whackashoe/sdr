@@ -36,11 +36,13 @@ struct concept
     std::vector<position_t> data;
 
     // for vector of positions we assume the data has already been dealt with
-    concept(const std::vector<position_t> & input) : data(input)
-    {}
+    concept(const std::vector<position_t> & input)
+    : data(input) {}
 
     // otherwise we assume that is hasn't, thus we only add non zero fields
-    template <width_t W> concept(const std::bitset<W> & input) : data()
+    template <width_t W>
+    concept(const std::bitset<W> & input)
+     : data()
     {
         for(std::size_t i=0; i < input.size(); ++i) {
             if(input[i]) {
@@ -50,7 +52,12 @@ struct concept
     }
 
     // store [amount] largest ones from input
-    template <typename T, width_t W> concept(const std::array<T, W> & input, const std::size_t amount) : data()
+    template <typename T, width_t W>
+    concept(
+        const std::array<T, W> & input,
+        const std::size_t amount
+    )
+     : data()
     {
         std::vector<position_t> idx(input.size());
         std::iota(std::begin(idx), std::end(idx), 0);
@@ -81,7 +88,8 @@ struct storage_concept
     // store the positions of all set bits from 0 -> width
     std::unordered_set<position_t> positions;
 
-    storage_concept(const concept & concept) : positions(std::begin(concept.data), std::end(concept.data))
+    storage_concept(const concept & concept)
+     : positions(std::begin(concept.data), std::end(concept.data))
     {}
 
     void fill(const concept & concept)
@@ -103,7 +111,8 @@ struct storage_concept
 
 
 // this is the memory bank for the sdr memory unit
-template <width_t Width> class bank
+template <width_t Width>
+class bank
 {
 private:
     // this holds our sets of vectors for easy comparison of different objects in storage
@@ -112,28 +121,44 @@ private:
     // all inputs we have ever received, we store here compressed into storage
     std::vector<storage_concept> storage;
 
-    std::vector<std::pair<position_t, std::size_t>> async_closest_helper_pos(const position_t pos, const std::size_t amount) const
-    {
+
+
+    std::vector<std::pair<position_t, std::size_t>> async_closest_helper_pos(
+        const position_t pos,
+        const std::size_t amount
+    ) const {
         return closest(pos, amount);
     }
 
-    std::vector<std::pair<position_t, std::size_t>> async_closest_helper_concept(const concept & concept, const std::size_t amount) const
-    {
+    std::vector<std::pair<position_t, std::size_t>> async_closest_helper_concept(
+        const concept & concept,
+        const std::size_t amount
+    ) const {
         return closest(concept, amount);
     }
 
-    std::vector<std::pair<position_t, double>> async_weighted_closest_helper_pos(const position_t pos, const std::size_t amount, const std::array<double, Width> & weights) const
-    {
+    template <typename WCollection>
+    std::vector<std::pair<position_t, double>> async_weighted_closest_helper_pos(
+        const position_t pos,
+        const std::size_t amount,
+        const WCollection & weights
+    ) const {
         return weighted_closest(pos, amount, weights);
     }
 
-    std::vector<std::pair<position_t, double>> async_weighted_closest_helper_concept(const concept & concept, const std::size_t amount, const std::array<double, Width> & weights) const
-    {
+    template <typename WCollection>
+    std::vector<std::pair<position_t, double>> async_weighted_closest_helper_concept(
+        const concept & concept,
+        const std::size_t amount,
+        const WCollection & weights
+    ) const {
         return weighted_closest(concept, amount, weights);
     }
 
-    template <typename Collection> std::size_t similarity_helper(const Collection & positions, const position_t d) const
-    {
+    template <typename Collection> std::size_t similarity_helper(
+        const Collection & positions,
+        const position_t d
+    ) const {
         std::size_t result { 0 };
 
         for(position_t pos : positions) {
@@ -143,7 +168,12 @@ private:
         return result;
     }
 
-    template <typename Collection> std::size_t weighted_similarity_helper(const Collection & positions, const position_t d, const std::array<double, Width> & weights) const
+    template <typename PCollection, typename WCollection>
+    std::size_t weighted_similarity_helper(
+        const PCollection & positions,
+        const position_t d,
+        const WCollection & weights
+    ) const
     {
         double result { 0.0f };
 
@@ -154,8 +184,11 @@ private:
         return result;
     }
 
-    template <typename Collection> std::size_t union_similarity_helper(const Collection & collection, const std::vector<position_t> & positions) const
-    {
+    template <typename PCollection>
+    std::size_t union_similarity_helper(
+        const PCollection & collection,
+        const std::vector<position_t> & positions
+    ) const {
         std::bitset<Width> punions;
 
         for(const position_t ppos : positions) {
@@ -173,8 +206,12 @@ private:
         return result;
     }
 
-    template <typename Collection> double weighted_union_similarity_helper(const Collection & collection, const std::vector<position_t> & positions, const std::array<double, Width> & weights) const
-    {
+    template <typename PCollection, typename WCollection>
+    double weighted_union_similarity_helper(
+        const PCollection & collection,
+        const std::vector<position_t> & positions,
+        const WCollection & weights
+    ) const {
         std::bitset<Width> punions;
 
         for(const position_t ppos : positions) {
@@ -304,8 +341,10 @@ public:
         return last_pos;
     }
 
-    void update(const position_t pos, const concept & concept)
-    {
+    void update(
+        const position_t pos,
+        const concept & concept
+    ) {
         storage_concept & storage_concept { storage[pos] };
 
         for(position_t i : storage_concept.positions) {
@@ -322,53 +361,75 @@ public:
     }
 
     // find amount of matching bits between two vectors
-    std::size_t similarity(const position_t a, const position_t b) const
-    {
+    std::size_t similarity(
+        const position_t a,
+        const position_t b
+    ) const {
         return similarity_helper(storage[a].positions, b);
     }
 
-    std::size_t similarity(const concept & concept, const position_t b) const
-    {
+    std::size_t similarity(
+        const concept & concept,
+        const position_t b
+    ) const {
         return similarity_helper(concept.data, b);
     }
 
     // find amount of matching bits between two vectors
-    double weighted_similarity(const position_t a, const position_t b, const std::array<double, Width> & weights) const
-    {
+    double weighted_similarity(
+        const position_t a,
+        const position_t b,
+        const std::array<double, Width> & weights
+    ) const {
         return weighted_similarity_helper(storage[a].positions, b, weights);
     }
 
-    double weighted_similarity(const concept & concept, const position_t b, const std::array<double, Width> & weights) const
-    {
+    double weighted_similarity(
+        const concept & concept,
+        const position_t b,
+        const std::array<double, Width> & weights
+    ) const {
         return weighted_similarity_helper(concept.data, b, weights);
     }
 
     // find similarity of one object compared to the OR'd result of a list of objects
-    std::size_t union_similarity(const position_t pos, const std::vector<position_t> & positions) const
-    {
+    std::size_t union_similarity(
+        const position_t pos,
+        const std::vector<position_t> & positions
+    ) const {
         return union_similarity_helper(storage[pos].positions, positions);
     }
 
-    std::size_t union_similarity(const concept & concept, const std::vector<position_t> & positions) const
-    {
+    std::size_t union_similarity(
+        const concept & concept,
+        const std::vector<position_t> & positions
+    ) const {
         return union_similarity_helper(concept.data, positions);
     }
 
-    double weighted_union_similarity(const position_t pos, const std::vector<position_t> & positions, const std::array<double, Width> & weights) const
-    {
+    double weighted_union_similarity(
+        const position_t pos,
+        const std::vector<position_t> & positions,
+        const std::array<double, Width> & weights
+    ) const {
         return weighted_union_similarity_helper(storage[pos].positions, positions, weights);
     }
 
-    double weighted_union_similarity(const concept & concept, const std::vector<position_t> & positions, const std::array<double, Width> & weights) const
-    {
+    double weighted_union_similarity(
+        const concept & concept,
+        const std::vector<position_t> & positions,
+        const std::array<double, Width> & weights
+    ) const {
         return weighted_union_similarity_helper(concept.data, positions, weights);
     }
 
     // find most similar to object at pos
     // first refers to position
     // second refers to matching number of bits
-    std::vector<std::pair<position_t, std::size_t>> closest(const position_t pos, const std::size_t amount) const
-    {
+    std::vector<std::pair<position_t, std::size_t>> closest(
+        const position_t pos,
+        const std::size_t amount
+    ) const {
         std::vector<position_t> idx(storage.size());
         std::vector<unsigned>     v(storage.size());
 
@@ -406,8 +467,10 @@ public:
         return ret;
     }
 
-    std::vector<std::pair<position_t, std::size_t>> closest(const concept & concept, const std::size_t amount) const
-    {
+    std::vector<std::pair<position_t, std::size_t>> closest(
+        const concept & concept,
+        const std::size_t amount
+    ) const {
         std::vector<position_t> idx(storage.size());
         std::vector<unsigned>     v(storage.size());
 
@@ -442,21 +505,28 @@ public:
         return ret;
     }
 
-    std::future<std::vector<std::pair<position_t, std::size_t>>> async_closest(const position_t pos, const std::size_t amount) const
-    {
+    std::future<std::vector<std::pair<position_t, std::size_t>>> async_closest(
+        const position_t pos,
+        const std::size_t amount
+    ) const {
         return std::async(std::launch::async, &bank<Width>::async_closest_helper_pos, this, pos, amount);
     }
 
-    std::future<std::vector<std::pair<position_t, std::size_t>>> async_closest(const concept & concept, const std::size_t amount) const
-    {
+    std::future<std::vector<std::pair<position_t, std::size_t>>> async_closest(
+        const concept & concept,
+        const std::size_t amount
+    ) const {
         return std::async(std::launch::async, &bank<Width>::async_closest_helper_concept, this, concept, amount);
     }
 
     // find most similar to object at pos
     // first refers to position
     // second refers to matching number of bits
-    std::vector<std::pair<position_t, double>> weighted_closest(const position_t pos, const std::size_t amount, const std::array<double, Width> & weights) const
-    {
+    std::vector<std::pair<position_t, double>> weighted_closest(
+        const position_t pos,
+        const std::size_t amount,
+        const std::array<double, Width> & weights
+    ) const {
         std::vector<position_t> idx(storage.size());
         std::vector<double>       v(storage.size());
 
@@ -494,8 +564,11 @@ public:
         return ret;
     }
 
-    std::vector<std::pair<position_t, double>> weighted_closest(const concept & concept, const std::size_t amount, const std::array<double, Width> & weights) const
-    {
+    std::vector<std::pair<position_t, double>> weighted_closest(
+        const concept & concept,
+        const std::size_t amount,
+        const std::array<double, Width> & weights
+    ) const {
         std::vector<position_t> idx(storage.size());
         std::vector<double>       v(storage.size());
 
@@ -530,13 +603,19 @@ public:
         return ret;
     }
 
-    std::future<std::vector<std::pair<position_t, double>>> async_weighted_closest(const position_t pos, const std::size_t amount, const std::array<double, Width> & weights) const
-    {
+    std::future<std::vector<std::pair<position_t, double>>> async_weighted_closest(
+        const position_t pos,
+        const std::size_t amount,
+        const std::array<double, Width> & weights
+    ) const {
         return std::async(std::launch::async, &bank<Width>::async_weighted_closest_helper_pos, this, pos, amount, weights);
     }
 
-    std::future<std::vector<std::pair<position_t, double>>> async_weighted_closest(const concept & concept, const std::size_t amount, const std::array<double, Width> & weights) const
-    {
+    std::future<std::vector<std::pair<position_t, double>>> async_weighted_closest(
+        const concept & concept,
+        const std::size_t amount,
+        const std::array<double, Width> & weights
+    ) const {
         return std::async(std::launch::async, &bank<Width>::async_weighted_closest_helper_concept, this, concept, amount, weights);
     }
 
@@ -562,8 +641,10 @@ public:
     }
 
     // has to match amount in data
-    std::vector<position_t> matching(const concept & concept, const std::size_t amount) const
-    {
+    std::vector<position_t> matching(
+        const concept & concept,
+        const std::size_t amount
+    ) const {
         std::unordered_set<position_t> matching;
 
         for(const std::size_t item : concept.data) {
@@ -584,8 +665,11 @@ public:
     }
 
     // has to match amount in data
-    std::vector<position_t> weighted_matching(const concept & concept, const double amount, const std::array<double, Width> & weights) const
-    {
+    std::vector<position_t> weighted_matching(
+        const concept & concept,
+        const double amount,
+        const std::array<double, Width> & weights
+    ) const {
         std::unordered_set<position_t> matching;
 
         for(const std::size_t item : concept.data) {
