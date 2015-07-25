@@ -103,15 +103,96 @@ struct storage_concept
 
 
 // this is the memory bank for the sdr memory unit
-template <width_t Width> struct bank
+template <width_t Width> class bank
 {
+private:
     // this holds our sets of vectors for easy comparison of different objects in storage
     std::array<std::unordered_set<position_t>, Width> bitmap;
 
     // all inputs we have ever received, we store here compressed into storage
     std::vector<storage_concept> storage;
 
+    std::vector<std::pair<position_t, std::size_t>> async_closest_helper_pos(const position_t pos, const std::size_t amount) const
+    {
+        return closest(pos, amount);
+    }
 
+    std::vector<std::pair<position_t, std::size_t>> async_closest_helper_concept(const concept & concept, const std::size_t amount) const
+    {
+        return closest(concept, amount);
+    }
+
+    std::vector<std::pair<position_t, double>> async_weighted_closest_helper_pos(const position_t pos, const std::size_t amount, const std::array<double, Width> & weights) const
+    {
+        return weighted_closest(pos, amount, weights);
+    }
+
+    std::vector<std::pair<position_t, double>> async_weighted_closest_helper_concept(const concept & concept, const std::size_t amount, const std::array<double, Width> & weights) const
+    {
+        return weighted_closest(concept, amount, weights);
+    }
+
+    template <typename Collection> std::size_t similarity_helper(const Collection & positions, const position_t d) const
+    {
+        std::size_t result { 0 };
+
+        for(position_t pos : positions) {
+            result += bitmap[pos].count(d);
+        }
+
+        return result;
+    }
+
+    template <typename Collection> std::size_t weighted_similarity_helper(const Collection & positions, const position_t d, const std::array<double, Width> & weights) const
+    {
+        double result { 0.0f };
+
+        for(position_t pos : positions) {
+            result += bitmap[pos].count(d) * weights[pos];
+        }
+
+        return result;
+    }
+
+    template <typename Collection> std::size_t union_similarity_helper(const Collection & collection, const std::vector<position_t> & positions) const
+    {
+        std::bitset<Width> punions;
+
+        for(const position_t ppos : positions) {
+            for(const position_t spos : storage[ppos].positions) {
+                punions.set(spos);
+            }
+        }
+
+        std::size_t result { 0 };
+
+        for(const position_t cmp : collection) {
+            result += punions[cmp];
+        }
+
+        return result;
+    }
+
+    template <typename Collection> double weighted_union_similarity_helper(const Collection & collection, const std::vector<position_t> & positions, const std::array<double, Width> & weights) const
+    {
+        std::bitset<Width> punions;
+
+        for(const position_t ppos : positions) {
+            for(const position_t spos : storage[ppos].positions) {
+                punions.set(spos);
+            }
+        }
+
+        double result { 0 };
+
+        for(const position_t cmp : collection) {
+            result += punions[cmp] * weights[cmp];
+        }
+
+        return result;
+    }
+
+public:
     bank() : bitmap(), storage()
     {}
 
@@ -243,65 +324,44 @@ template <width_t Width> struct bank
     // find amount of matching bits between two vectors
     std::size_t similarity(const position_t a, const position_t b) const
     {
-        std::size_t result { 0 };
+        return similarity_helper(storage[a].positions, b);
+    }
 
-        for(position_t pos : storage[a].positions) {
-            result += bitmap[pos].count(b);
-        }
-
-        return result;
+    std::size_t similarity(const concept & concept, const position_t b) const
+    {
+        return similarity_helper(concept.data, b);
     }
 
     // find amount of matching bits between two vectors
     double weighted_similarity(const position_t a, const position_t b, const std::array<double, Width> & weights) const
     {
-        double result { 0 };
+        return weighted_similarity_helper(storage[a].positions, b, weights);
+    }
 
-        for(position_t pos : storage[a].positions) {
-            result += bitmap[pos].count(b) * weights[pos];
-        }
-
-        return result;
+    double weighted_similarity(const concept & concept, const position_t b, const std::array<double, Width> & weights) const
+    {
+        return weighted_similarity_helper(concept.data, b, weights);
     }
 
     // find similarity of one object compared to the OR'd result of a list of objects
     std::size_t union_similarity(const position_t pos, const std::vector<position_t> & positions) const
     {
-        std::bitset<Width> punions;
-
-        for(const position_t ppos : positions) {
-            for(const position_t spos : storage[ppos].positions) {
-                punions.set(spos);
-            }
-        }
-
-        std::size_t result { 0 };
-
-        for(const position_t cmp : storage[pos].positions) {
-            result += punions[cmp];
-        }
-
-        return result;
+        return union_similarity_helper(storage[pos].positions, positions);
     }
 
-    // find similarity of one object compared to the OR'd result of a list of objects
+    std::size_t union_similarity(const concept & concept, const std::vector<position_t> & positions) const
+    {
+        return union_similarity_helper(concept.data, positions);
+    }
+
     double weighted_union_similarity(const position_t pos, const std::vector<position_t> & positions, const std::array<double, Width> & weights) const
     {
-        std::bitset<Width> punions;
+        return weighted_union_similarity_helper(storage[pos].positions, positions, weights);
+    }
 
-        for(const position_t ppos : positions) {
-            for(const position_t spos : storage[ppos].positions) {
-                punions.set(spos);
-            }
-        }
-
-        double result { 0 };
-
-        for(const position_t cmp : storage[pos].positions) {
-            result += punions[cmp] * weights[cmp];
-        }
-
-        return result;
+    double weighted_union_similarity(const concept & concept, const std::vector<position_t> & positions, const std::array<double, Width> & weights) const
+    {
+        return weighted_union_similarity_helper(concept.data, positions, weights);
     }
 
     // find most similar to object at pos
@@ -346,9 +406,50 @@ template <width_t Width> struct bank
         return ret;
     }
 
+    std::vector<std::pair<position_t, std::size_t>> closest(const concept & concept, const std::size_t amount) const
+    {
+        std::vector<position_t> idx(storage.size());
+        std::vector<unsigned>     v(storage.size());
+
+        // if there are less than amount in storage, just return amount that exist
+        const std::size_t partial_amount { (amount >= idx.size()) ? idx.size() : amount };
+
+        std::iota(std::begin(idx), std::end(idx), 0);
+
+        // count matching bits for each
+        for(const position_t spos : concept.data) {
+            for(const position_t bpos : bitmap[spos]) {
+                ++v[bpos];
+            }
+        }
+
+        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
+            const position_t a,
+            const position_t b
+        ) {
+            return v[a] > v[b];
+        });
+
+        // create std::pair for result
+        std::vector<std::pair<position_t, std::size_t>> ret;
+        ret.reserve(partial_amount);
+
+        for(std::size_t i=0; i<partial_amount; ++i) {
+            const position_t m { idx[i] };
+            ret.push_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
+        }
+
+        return ret;
+    }
+
     std::future<std::vector<std::pair<position_t, std::size_t>>> async_closest(const position_t pos, const std::size_t amount) const
     {
-        return std::async(std::launch::async, &bank<Width>::closest, this, pos, amount);
+        return std::async(std::launch::async, &bank<Width>::async_closest_helper_pos, this, pos, amount);
+    }
+
+    std::future<std::vector<std::pair<position_t, std::size_t>>> async_closest(const concept & concept, const std::size_t amount) const
+    {
+        return std::async(std::launch::async, &bank<Width>::async_closest_helper_concept, this, concept, amount);
     }
 
     // find most similar to object at pos
@@ -393,9 +494,50 @@ template <width_t Width> struct bank
         return ret;
     }
 
-    std::future<std::vector<std::pair<position_t, std::size_t>>> async_weighted_closest(const position_t pos, const std::size_t amount, const std::array<double, Width> & weights) const
+    std::vector<std::pair<position_t, double>> weighted_closest(const concept & concept, const std::size_t amount, const std::array<double, Width> & weights) const
     {
-        return std::async(std::launch::async, &bank<Width>::weighted_closest, this, pos, amount, weights);
+        std::vector<position_t> idx(storage.size());
+        std::vector<double>       v(storage.size());
+
+        // if there are less than amount in storage, just return amount that exist
+        const std::size_t partial_amount { (amount >= idx.size()) ? idx.size() : amount };
+
+        std::iota(std::begin(idx), std::end(idx), 0);
+
+        // count matching bits for each
+        for(const position_t spos : concept.data) {
+            for(const position_t bpos : bitmap[spos]) {
+                v[bpos] += weights[spos];
+            }
+        }
+
+        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
+            const position_t a,
+            const position_t b
+        ) {
+            return v[a] > v[b];
+        });
+
+        // create std::pair for result
+        std::vector<std::pair<position_t, double>> ret;
+        ret.reserve(partial_amount);
+
+        for(std::size_t i=0; i<partial_amount; ++i) {
+            const position_t m { idx[i] };
+            ret.push_back(std::make_pair(m, v[m]));
+        }
+
+        return ret;
+    }
+
+    std::future<std::vector<std::pair<position_t, double>>> async_weighted_closest(const position_t pos, const std::size_t amount, const std::array<double, Width> & weights) const
+    {
+        return std::async(std::launch::async, &bank<Width>::async_weighted_closest_helper_pos, this, pos, amount, weights);
+    }
+
+    std::future<std::vector<std::pair<position_t, double>>> async_weighted_closest(const concept & concept, const std::size_t amount, const std::array<double, Width> & weights) const
+    {
+        return std::async(std::launch::async, &bank<Width>::async_weighted_closest_helper_concept, this, concept, amount, weights);
     }
 
     // return all items matching all in data
@@ -442,15 +584,15 @@ template <width_t Width> struct bank
     }
 
     // has to match amount in data
-    std::vector<position_t> weighted_matching(const std::vector<position_t> & data, const double amount, const std::array<double, Width> & weights) const
+    std::vector<position_t> weighted_matching(const concept & concept, const double amount, const std::array<double, Width> & weights) const
     {
         std::unordered_set<position_t> matching;
 
-        for(const std::size_t item : data) {
+        for(const std::size_t item : concept.data) {
             for(const std::size_t pos : bitmap[item]) {
                 double amount_matching { 0 };
 
-                for(const std::size_t m : data) {
+                for(const std::size_t m : concept.data) {
                     amount_matching += bitmap[m].count(pos) * weights[m];
                 }
 

@@ -14,11 +14,15 @@ int main()
 {
     constexpr std::size_t Amount = 100000;
     constexpr std::size_t Width = 2048;
-    constexpr std::size_t ParallelAmount = 100;
+    constexpr std::size_t ParallelAmount = 20;
     constexpr float OnPercent = 0.02;
 
     sdr::bank<Width> memory;
     std::vector<std::bitset<Width>> fields;
+
+    std::array<double, Width> weights;
+    weights.fill(1.1);
+
 
     {
         auto start = since_epoch();
@@ -54,6 +58,26 @@ int main()
         auto end = since_epoch();
 
         std::cout << "insertion took: " << (end-start) << "ms" << std::endl;
+    }
+
+    {
+        auto start = since_epoch();
+
+        memory.save_to_file("test.sdr");
+
+        auto end = since_epoch();
+
+        std::cout << "save to file took: " << (end-start) << "ms" << std::endl;
+    }
+
+    {
+        auto start = since_epoch();
+
+        const std::size_t storage_size { memory.load_from_file("test.sdr") };
+
+        auto end = since_epoch();
+
+        std::cout << "load from file (" << storage_size << " concepts) took: " << (end-start) << "ms" << std::endl;
     }
 
     {
@@ -122,7 +146,7 @@ int main()
     {
         auto start = since_epoch();
 
-        auto matching = memory.matching(sdr::concept({ 1000, 88 }));
+        auto matching = memory.matching(sdr::concept({ 0, 10 }));
 
         auto end = since_epoch();
 
