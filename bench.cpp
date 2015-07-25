@@ -23,6 +23,11 @@ int main()
     std::array<double, Width> weights;
     weights.fill(1.1);
 
+    std::cout << "bench" << std::endl;
+    std::cout << "\tamount: " << Amount << std::endl;
+    std::cout << "\twidth: " << Width << std::endl;
+    std::cout << "\tpercent: " << OnPercent << std::endl;
+    std::cout << std::endl;
 
     {
         auto start = since_epoch();
@@ -69,6 +74,8 @@ int main()
 
         std::cout << "save to file took: " << (end-start) << "ms" << std::endl;
     }
+
+    memory.clear();
 
     {
         auto start = since_epoch();
