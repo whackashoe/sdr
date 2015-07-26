@@ -14,7 +14,6 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
-#include <unordered_set>
 #include <future>
 #include <thread>
 #include <fstream>
@@ -32,7 +31,7 @@ class bank
 {
 private:
     // this holds our sets of vectors for easy comparison of different objects in storage
-    std::array<std::unordered_set<sdr::position_t>, Width> bitmap;
+    std::array<sdr::hash_set<sdr::position_t>, Width> bitmap;
 
     // all inputs we have ever received, we store here compressed into storage
     std::vector<sdr::storage_concept> storage;
@@ -147,7 +146,11 @@ private:
 
 public:
     bank() : bitmap(), storage()
-    {}
+    {
+        for(auto & i : bitmap) {
+            sdr::hash_set_init(i);
+        }
+    }
 
     bool save_to_file(const std::string & src) const
     {
@@ -235,7 +238,7 @@ public:
             std::vector<sdr::position_t> positions;
 
             for(std::size_t j=0; j < size; ++j) {
-                positions.push_back(static_cast<sdr::position_t>(read()));
+                positions.emplace_back(static_cast<sdr::position_t>(read()));
             }
 
             insert(sdr::concept(positions));
@@ -246,7 +249,7 @@ public:
 
     sdr::position_t insert(const sdr::concept & concept)
     {
-        storage.push_back(sdr::storage_concept(concept));
+        storage.emplace_back(sdr::storage_concept(concept));
 
         const sdr::position_t last_pos { storage.size() - 1 };
 
@@ -395,7 +398,7 @@ public:
 
         for(std::size_t i=0; i<partial_amount; ++i) {
             const sdr::position_t m { idx[i] };
-            ret.push_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
+            ret.emplace_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
         }
 
         return ret;
@@ -433,7 +436,7 @@ public:
 
         for(std::size_t i=0; i<partial_amount; ++i) {
             const sdr::position_t m { idx[i] };
-            ret.push_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
+            ret.emplace_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
         }
 
         return ret;
@@ -493,7 +496,7 @@ public:
 
         for(std::size_t i=0; i<partial_amount; ++i) {
             const sdr::position_t m { idx[i] };
-            ret.push_back(std::make_pair(m, v[m]));
+            ret.emplace_back(std::make_pair(m, v[m]));
         }
 
         return ret;
@@ -533,7 +536,7 @@ public:
 
         for(std::size_t i=0; i<partial_amount; ++i) {
             const sdr::position_t m { idx[i] };
-            ret.push_back(std::make_pair(m, v[m]));
+            ret.emplace_back(std::make_pair(m, v[m]));
         }
 
         return ret;
@@ -560,7 +563,8 @@ public:
     // return all items matching all in data
     std::vector<sdr::position_t> matching(const sdr::concept & concept) const
     {
-        std::unordered_set<sdr::position_t> matching;
+        sdr::hash_set<sdr::position_t> matching;
+        sdr::hash_set_init(matching);
 
         for(const std::size_t item : concept.data) {
             for(const std::size_t pos : bitmap[item]) {
@@ -583,7 +587,8 @@ public:
         const sdr::concept & concept,
         const std::size_t amount
     ) const {
-        std::unordered_set<sdr::position_t> matching;
+        sdr::hash_set<sdr::position_t> matching;
+        sdr::hash_set_init(matching);
 
         for(const std::size_t item : concept.data) {
             for(const std::size_t pos : bitmap[item]) {
@@ -609,7 +614,8 @@ public:
         const double amount,
         const WCollection & weights
     ) const {
-        std::unordered_set<sdr::position_t> matching;
+        sdr::hash_set<sdr::position_t> matching;
+        sdr::hash_set_init(matching);
 
         for(const std::size_t item : concept.data) {
             for(const std::size_t pos : bitmap[item]) {

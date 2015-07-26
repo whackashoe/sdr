@@ -32,7 +32,7 @@ struct concept
     {
         for(std::size_t i=0; i < input.size(); ++i) {
             if(input[i]) {
-                data.push_back(i);
+                data.emplace_back(i);
             }
         }
     }
@@ -61,7 +61,7 @@ struct concept
                 break;
             }
 
-            data.push_back(idx[i]);
+            data.emplace_back(idx[i]);
         }
     }
 };

@@ -18,11 +18,14 @@ namespace sdr
 struct storage_concept
 {
     // store the positions of all set bits from 0 -> width
-    std::unordered_set<sdr::position_t> positions;
+    sdr::hash_set<sdr::position_t> positions;
 
     storage_concept(const sdr::concept & concept)
-     : positions(std::begin(concept.data), std::end(concept.data))
-    {}
+     : positions()
+    {
+        sdr::hash_set_init(positions);
+        fill(concept);
+    }
 
     void fill(const sdr::concept & concept)
     {
