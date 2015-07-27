@@ -31,7 +31,7 @@ class bank
 {
 private:
     // this holds our sets of vectors for easy comparison of different objects in storage
-    std::array<sdr::hash_set<sdr::position_t>, Width> bitmap;
+    std::vector<sdr::hash_set<sdr::position_t>> bitmap;
 
     // all inputs we have ever received, we store here compressed into storage
     std::vector<sdr::storage_concept> storage;
@@ -107,18 +107,33 @@ private:
         const PCollection & collection,
         const std::vector<sdr::position_t> & positions
     ) const {
-        std::bitset<Width> punions;
+        sdr::hash_set<sdr::position_t> punions;
+        sdr::hash_set_init(punions);
 
         for(const sdr::position_t ppos : positions) {
             for(const sdr::position_t spos : storage[ppos].positions) {
-                punions.set(spos);
+                punions.insert(spos);
             }
         }
 
+        std::vector<sdr::position_t> vunion(std::begin(punions), std::end(punions));
+
         std::size_t result { 0 };
 
-        for(const sdr::position_t cmp : collection) {
-            result += punions[cmp];
+        auto vit = vunion.begin();
+        for(auto cit = collection.begin(); vit != vunion.end() && cit != collection.end(); ++cit) {
+            sdr::position_t deref { (*vit) };
+            const sdr::position_t cmp { (*cit) };
+
+            while(deref < cmp) {
+                ++vit;
+                deref = (*vit);
+            }
+
+            if(deref == cmp) {
+                result += deref;
+                ++vit;
+            }
         }
 
         return result;
@@ -130,25 +145,40 @@ private:
         const std::vector<sdr::position_t> & positions,
         const WCollection & weights
     ) const {
-        std::bitset<Width> punions;
+        sdr::hash_set<sdr::position_t> punions;
+        sdr::hash_set_init(punions);
 
         for(const sdr::position_t ppos : positions) {
             for(const sdr::position_t spos : storage[ppos].positions) {
-                punions.set(spos);
+                punions.insert(spos);
             }
         }
 
-        double result { 0 };
+        std::vector<sdr::position_t> vunion(std::begin(punions), std::end(punions));
 
-        for(const sdr::position_t cmp : collection) {
-            result += punions[cmp] * weights[cmp];
+        double result { 0.0f };
+
+        auto vit = vunion.begin();
+        for(auto cit = collection.begin(); vit != vunion.end() && cit != collection.end(); ++cit) {
+            sdr::position_t deref { (*vit) };
+            const sdr::position_t cmp { (*cit) };
+
+            while(deref < cmp) {
+                ++vit;
+                deref = (*vit);
+            }
+
+            if(deref == cmp) {
+                result += deref * weights[cmp];
+                ++vit;
+            }
         }
 
         return result;
     }
 
 public:
-    bank() : bitmap(), storage()
+    bank() : bitmap(Width), storage()
     {
         for(auto & i : bitmap) {
             sdr::hash_set_init(i);
