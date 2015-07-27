@@ -38,6 +38,9 @@ private:
 
 
 
+    // helpers are called from the public api
+    // these just reduce code bloat
+
     std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_pos(
         const sdr::position_t pos,
         const std::size_t amount
@@ -152,11 +155,13 @@ public:
         }
     }
 
+    // recomend you use .sdr extension
     bool save_to_file(const std::string & src) const
     {
         std::ofstream ofs(src, std::ios::out | std::ios::binary);
 
         if(! ofs) {
+            std::cerr << "file unable to be opened for writing: " << src << std::endl;
             return false;
         }
 
@@ -193,6 +198,7 @@ public:
     {
         std::ifstream ifs(src, std::ios::binary);
         if(! ifs) {
+            std::cerr << "file not found: " << src << std::endl;
             return false;
         }
 
