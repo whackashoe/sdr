@@ -14,7 +14,9 @@ As well as saving, loading, and utility methods.
 ###Designed to be very fast & idiomatic C++11.
 
 Amount means total number of stored items in database
+
 Width means dimensions per item
+
 Percent means amount enabled
 
 
