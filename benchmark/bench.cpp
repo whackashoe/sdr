@@ -1,7 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include <random>
-#include "sdr.hpp"
+#include "../includes/sdr.hpp"
 
 
 std::size_t since_epoch()
@@ -14,7 +14,7 @@ int main()
 {
     constexpr std::size_t Amount = 100000;
     constexpr std::size_t Width = 2048;
-    constexpr std::size_t ParallelAmount = 20;
+    constexpr std::size_t ParallelAmount = 100;
     constexpr float OnPercent = 0.02;
 
     sdr::bank<Width> memory;
