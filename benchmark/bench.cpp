@@ -3,12 +3,11 @@
 #include <random>
 #include "../includes/sdr.hpp"
 
-
-std::size_t since_epoch()
+std::chrono::system_clock::duration since_epoch()
 {
-    auto now = std::chrono::system_clock::now().time_since_epoch();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+    return std::chrono::system_clock::now().time_since_epoch();
 }
+
 
 int main()
 {
@@ -50,7 +49,7 @@ int main()
 
         auto end = since_epoch();
 
-        std::cout << "generation took: " << (end-start) << "ms" << std::endl;
+        std::cout << "generation took: " <<  std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
     }
 
     {
@@ -62,7 +61,7 @@ int main()
 
         auto end = since_epoch();
 
-        std::cout << "insertion took: " << (end-start) << "ms" << std::endl;
+        std::cout << "insertion took: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
     }
 
     {
@@ -72,7 +71,7 @@ int main()
 
         auto end = since_epoch();
 
-        std::cout << "save to file took: " << (end-start) << "ms" << std::endl;
+        std::cout << "save to file took: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
     }
 
     memory.clear();
@@ -84,7 +83,7 @@ int main()
 
         auto end = since_epoch();
 
-        std::cout << "load from file (" << storage_size << " concepts) took: " << (end-start) << "ms" << std::endl;
+        std::cout << "load from file (" << storage_size << " concepts) took: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
     }
 
     {
@@ -103,7 +102,7 @@ int main()
 
         auto end = since_epoch();
 
-        std::cout << "finding closest (parallel => " << ParallelAmount << ") took: " << (end-start) << "ms" << std::endl;
+        std::cout << "finding closest (parallel => " << ParallelAmount << ") took: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
 
         std::size_t counter = 0;
         for(auto & closest : closests) {
@@ -127,7 +126,7 @@ int main()
 
         auto end = since_epoch();
 
-        std::cout << "finding weighted closest took: " << (end-start) << "ms" << std::endl;
+        std::cout << "finding weighted closest took: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
 
         std::cout << "closest: " << std::endl;
         for(auto & it : closest) {
@@ -145,7 +144,7 @@ int main()
 
         auto end = since_epoch();
 
-        std::cout << "finding union similarity took: " << (end-start) << "ms" << std::endl;
+        std::cout << "finding union similarity took: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() << "ns" << std::endl;
 
         std::cout << "similarity: " << similarity << std::endl;
     }
@@ -157,7 +156,7 @@ int main()
 
         auto end = since_epoch();
 
-        std::cout << "finding matching took: " << (end-start) << "ms" << std::endl;
+        std::cout << "finding matching took: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() << "ns" << std::endl;
         std::cout << "matching.size() => " << matching.size() << std::endl;
 
         std::cout << "matching: " << std::endl;
