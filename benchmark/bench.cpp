@@ -12,15 +12,14 @@ std::chrono::system_clock::duration since_epoch()
 int main()
 {
     constexpr std::size_t Amount = 100000;
-    constexpr std::size_t Width = 2048;
+    constexpr sdr::width_t Width = 2048;
     constexpr std::size_t ParallelAmount = 100;
-    constexpr float OnPercent = 0.02;
+    constexpr double OnPercent = 0.02;
 
     sdr::bank<Width> memory;
-    std::vector<std::bitset<Width>> fields;
+    std::vector<std::vector<sdr::position_t>> fields;
 
-    std::array<double, Width> weights;
-    weights.fill(1.1);
+    std::vector<double> weights(Width, 1.1);
 
     std::cout << "bench" << std::endl;
     std::cout << "\tamount: " << Amount << std::endl;
@@ -38,10 +37,10 @@ int main()
         const std::size_t amount_set = static_cast<std::size_t>(Width * OnPercent);
 
         for(std::size_t i=0; i<Amount; ++i) {
-            std::bitset<Width> data;
+            std::vector<sdr::position_t> data;
 
             for(std::size_t j=0; j<amount_set; ++j) {
-                data.set(wdis(gen));
+                data.push_back(wdis(gen));
             }
 
             fields.push_back(data);
@@ -92,7 +91,7 @@ int main()
         std::vector<std::future<std::vector<std::pair<sdr::position_t, std::size_t>>>> futures;
 
         for(sdr::position_t i=0; i < ParallelAmount; ++i) {
-            futures.push_back(memory.async_closest(i, 10));
+            futures.push_back(memory.async_closest(i, 2));
         }
 
         std::vector<std::vector<std::pair<sdr::position_t, std::size_t>>> closests;
@@ -120,8 +119,6 @@ int main()
     {
         auto start = since_epoch();
 
-        std::array<double, Width> weights;
-        std::fill(weights.begin(), weights.end(), 1.1);
         auto closest = memory.weighted_closest(1, 10, weights);
 
         auto end = since_epoch();
