@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <iterator>
+#include <cassert>
 
 namespace sdr
 {
@@ -77,6 +78,12 @@ private:
         const Collection & positions,
         const sdr::position_t d
     ) const {
+#ifndef NDEBUG
+        for(auto & i : positions) {
+            assert(i < Width);
+        }
+        assert(d < Width);
+#endif
         std::size_t result { 0 };
 
         for(sdr::position_t pos : positions) {
@@ -91,8 +98,14 @@ private:
         const PCollection & positions,
         const sdr::position_t d,
         const WCollection & weights
-    ) const
-    {
+    ) const {
+#ifndef NDEBUG
+        for(auto & i : positions) {
+            assert(i < Width);
+        }
+        assert(d < Width);
+        assert(weights.size() == Width);
+#endif
         double result { 0.0f };
 
         for(sdr::position_t pos : positions) {
@@ -107,6 +120,11 @@ private:
         const PCollection & collection,
         const std::vector<sdr::position_t> & positions
     ) const {
+#ifndef NDEBUG
+        for(auto & i : positions) {
+            assert(i < Width);
+        }
+#endif
         std::size_t result { 0 };
 
         if(Width < sdr::UNION_SIMILARITY_SWITCH_WIDTH) {
@@ -159,6 +177,12 @@ private:
         const std::vector<sdr::position_t> & positions,
         const WCollection & weights
     ) const {
+#ifndef NDEBUG
+        for(auto & i : positions) {
+            assert(i < Width);
+        }
+        assert(weights.size() == Width);
+#endif
         double result { 0.0f };
 
         if(Width < sdr::UNION_SIMILARITY_SWITCH_WIDTH) {
@@ -311,6 +335,11 @@ public:
 
     sdr::position_t insert(const sdr::concept & concept)
     {
+#ifndef NDEBUG
+        for(auto & i : concept.data) {
+            assert(i < Width);
+        }
+#endif
         storage.emplace_back(sdr::storage_concept(concept));
 
         const sdr::position_t last_pos { storage.size() - 1 };
@@ -326,6 +355,12 @@ public:
         const sdr::position_t pos,
         const sdr::concept & concept
     ) {
+#ifndef NDEBUG
+        assert(pos < storage.size());
+        for(auto & i : concept.data) {
+            assert(i < Width);
+        }
+#endif
         sdr::storage_concept & storage_concept { storage[pos] };
 
         for(sdr::position_t i : storage_concept.positions) {
@@ -429,6 +464,9 @@ public:
         const sdr::position_t pos,
         const std::size_t amount
     ) const {
+#ifndef NDEBUG
+        assert(pos < storage.size());
+#endif
         std::vector<sdr::position_t> idx(storage.size());
         std::vector<unsigned>          v(storage.size());
 
@@ -470,6 +508,11 @@ public:
         const sdr::concept & concept,
         const std::size_t amount
     ) const {
+#ifndef NDEBUG
+        for(auto & i : concept.data) {
+            assert(i < Width);
+        }
+#endif
         std::vector<sdr::position_t> idx(storage.size());
         std::vector<unsigned>          v(storage.size());
 
@@ -527,6 +570,10 @@ public:
         const std::size_t amount,
         const WCollection & weights
     ) const {
+#ifndef NDEBUG
+        assert(pos < storage.size());
+        assert(weights.size() == Width);
+#endif
         std::vector<sdr::position_t> idx(storage.size());
         std::vector<double>            v(storage.size());
 
@@ -570,6 +617,12 @@ public:
         const std::size_t amount,
         const WCollection & weights
     ) const {
+#ifndef NDEBUG
+        for(auto & i : concept.data) {
+            assert(i < Width);
+        }
+        assert(weights.size() == Width);
+#endif
         std::vector<sdr::position_t> idx(storage.size());
         std::vector<double>            v(storage.size());
 
@@ -625,6 +678,11 @@ public:
     // return all items matching all in data
     std::vector<sdr::position_t> matching(const sdr::concept & concept) const
     {
+#ifndef NDEBUG
+        for(auto & i : concept.data) {
+            assert(i < Width);
+        }
+#endif
         sdr::hash_set<sdr::position_t> matching;
         sdr::hash_set_init(matching);
 
@@ -649,6 +707,11 @@ public:
         const sdr::concept & concept,
         const std::size_t amount
     ) const {
+#ifndef NDEBUG
+        for(auto & i : concept.data) {
+            assert(i < Width);
+        }
+#endif
         sdr::hash_set<sdr::position_t> matching;
         sdr::hash_set_init(matching);
 
@@ -676,6 +739,12 @@ public:
         const double amount,
         const WCollection & weights
     ) const {
+#ifndef NDEBUG
+        for(auto & i : concept.data) {
+            assert(i < Width);
+        }
+        assert(weights.size() == Width);
+#endif
         sdr::hash_set<sdr::position_t> matching;
         sdr::hash_set_init(matching);
 
