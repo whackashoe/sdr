@@ -107,32 +107,46 @@ private:
         const PCollection & collection,
         const std::vector<sdr::position_t> & positions
     ) const {
-        sdr::hash_set<sdr::position_t> punions;
-        sdr::hash_set_init(punions);
-
-        for(const sdr::position_t ppos : positions) {
-            for(const sdr::position_t spos : storage[ppos].positions) {
-                punions.insert(spos);
-            }
-        }
-
-        std::vector<sdr::position_t> vunion(std::begin(punions), std::end(punions));
-
         std::size_t result { 0 };
 
-        auto vit = vunion.begin();
-        for(auto cit = collection.begin(); vit != vunion.end() && cit != collection.end(); ++cit) {
-            sdr::position_t deref { (*vit) };
-            const sdr::position_t cmp { (*cit) };
+        if(Width < sdr::UNION_SIMILARITY_SWITCH_WIDTH) {
+            // this algorithm is faster for smaller Width, but much slower for large Width
+            std::bitset<Width> punions;
 
-            while(deref < cmp) {
-                ++vit;
-                deref = (*vit);
+            for(const sdr::position_t ppos : positions) {
+                for(const sdr::position_t spos : storage[ppos].positions) {
+                    punions.set(spos);
+                }
             }
 
-            if(deref == cmp) {
-                result += deref;
-                ++vit;
+            for(const sdr::position_t cmp : collection) {
+                result += punions[cmp];
+            }
+
+        } else {
+            sdr::hash_set<sdr::position_t> punions;
+            sdr::hash_set_init(punions);
+
+            for(const sdr::position_t ppos : positions) {
+                for(const sdr::position_t spos : storage[ppos].positions) {
+                    punions.insert(spos);
+                }
+            }
+
+            auto vit = punions.begin();
+            for(auto cit = collection.begin(); vit != punions.end() && cit != collection.end(); ++cit) {
+                sdr::position_t deref { (*vit) };
+                const sdr::position_t cmp { (*cit) };
+
+                while(deref < cmp && vit != punions.end()) {
+                    ++vit;
+                    deref = (*vit);
+                }
+
+                if(deref == cmp) {
+                    result += deref;
+                    ++vit;
+                }
             }
         }
 
@@ -145,32 +159,44 @@ private:
         const std::vector<sdr::position_t> & positions,
         const WCollection & weights
     ) const {
-        sdr::hash_set<sdr::position_t> punions;
-        sdr::hash_set_init(punions);
-
-        for(const sdr::position_t ppos : positions) {
-            for(const sdr::position_t spos : storage[ppos].positions) {
-                punions.insert(spos);
-            }
-        }
-
-        std::vector<sdr::position_t> vunion(std::begin(punions), std::end(punions));
-
         double result { 0.0f };
 
-        auto vit = vunion.begin();
-        for(auto cit = collection.begin(); vit != vunion.end() && cit != collection.end(); ++cit) {
-            sdr::position_t deref { (*vit) };
-            const sdr::position_t cmp { (*cit) };
+        if(Width < sdr::UNION_SIMILARITY_SWITCH_WIDTH) {
+            std::bitset<Width> punions;
 
-            while(deref < cmp) {
-                ++vit;
-                deref = (*vit);
+            for(const sdr::position_t ppos : positions) {
+                for(const sdr::position_t spos : storage[ppos].positions) {
+                    punions.set(spos);
+                }
             }
 
-            if(deref == cmp) {
-                result += deref * weights[cmp];
-                ++vit;
+            for(const sdr::position_t cmp : collection) {
+                result += punions[cmp] * weights[cmp];
+            }
+        } else {
+            sdr::hash_set<sdr::position_t> punions;
+            sdr::hash_set_init(punions);
+
+            for(const sdr::position_t ppos : positions) {
+                for(const sdr::position_t spos : storage[ppos].positions) {
+                    punions.insert(spos);
+                }
+            }
+
+            auto vit = punions.begin();
+            for(auto cit = collection.begin(); vit != punions.end() && cit != collection.end(); ++cit) {
+                sdr::position_t deref { (*vit) };
+                const sdr::position_t cmp { (*cit) };
+
+                while(deref < cmp && vit != punions.end()) {
+                    ++vit;
+                    deref = (*vit);
+                }
+
+                if(deref == cmp) {
+                    result += deref * weights[cmp];
+                    ++vit;
+                }
             }
         }
 
