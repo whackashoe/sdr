@@ -130,7 +130,7 @@ private:
                 }
 
                 if(deref == cmp) {
-                    result += deref;
+                    ++result;
                     ++vit;
                 }
             }
@@ -186,7 +186,7 @@ private:
                 }
 
                 if(deref == cmp) {
-                    result += deref * weights[cmp];
+                    result += weights[cmp];
                     ++vit;
                 }
             }
