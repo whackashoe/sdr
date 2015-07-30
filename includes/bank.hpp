@@ -44,18 +44,18 @@ private:
 
     template <typename Collection> std::size_t similarity_helper(
         const Collection & positions,
-        const sdr::position_t d
+        const sdr::position_t pos_b
     ) const {
 #ifndef NDEBUG
         for(auto & i : positions) {
             assert(i < Width);
         }
-        assert(d < Width);
+        assert(d < storage.size());
 #endif
         std::size_t result { 0 };
 
         for(sdr::position_t pos : positions) {
-            result += bitmap[pos].count(d);
+            result += bitmap[pos].count(pos_b);
         }
 
         return result;
@@ -64,20 +64,20 @@ private:
     template <typename PCollection, typename WCollection>
     std::size_t weighted_similarity_helper(
         const PCollection & positions,
-        const sdr::position_t d,
+        const sdr::position_t pos_b,
         const WCollection & weights
     ) const {
 #ifndef NDEBUG
         for(auto & i : positions) {
             assert(i < Width);
         }
-        assert(d < Width);
+        assert(pos_b < storage.size());
         assert(weights.size() == Width);
 #endif
         double result { 0.0f };
 
         for(sdr::position_t pos : positions) {
-            result += bitmap[pos].count(d) * weights[pos];
+            result += bitmap[pos].count(pos_b) * weights[pos];
         }
 
         return result;
@@ -89,8 +89,11 @@ private:
         const std::vector<sdr::position_t> & positions
     ) const {
 #ifndef NDEBUG
-        for(auto & i : positions) {
+        for(auto & i : collection) {
             assert(i < Width);
+        }
+        for(auto & i : positions) {
+            assert(i < storage.size());
         }
 #endif
         std::size_t result { 0 };
@@ -146,8 +149,11 @@ private:
         const WCollection & weights
     ) const {
 #ifndef NDEBUG
-        for(auto & i : positions) {
+        for(auto & i : collection) {
             assert(i < Width);
+        }
+        for(auto & i : positions) {
+            assert(i < storage.size());
         }
         assert(weights.size() == Width);
 #endif
@@ -200,6 +206,11 @@ private:
         const PCollection & collection,
         const std::size_t amount
     ) const {
+#ifndef NDEBUG
+        for(auto & i : collection) {
+            assert(i < Width);
+        }
+#endif
         std::vector<sdr::position_t> idx(storage.size());
         std::vector<unsigned>          v(storage.size());
 
@@ -234,12 +245,32 @@ private:
         return ret;
     }
 
+    std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_pos(
+        const sdr::position_t pos,
+        const std::size_t amount
+    ) const {
+        return closest_helper(storage[pos].positions, amount);
+    }
+
+    std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_concept(
+        const sdr::concept & concept,
+        const std::size_t amount
+    ) const {
+        return closest_helper(concept.data, amount);
+    }
+
     template <typename PCollection, typename WCollection>
     std::vector<std::pair<sdr::position_t, double>> weighted_closest_helper(
         const PCollection collection,
         const std::size_t amount,
         const WCollection & weights
     ) const {
+#ifndef NDEBUG
+        for(auto & i : collection) {
+            assert(i < Width);
+        }
+        assert(weights.size() == Width);
+#endif
         std::vector<sdr::position_t> idx(storage.size());
         std::vector<double>            v(storage.size());
 
@@ -274,27 +305,13 @@ private:
         return ret;
     }
 
-    std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_pos(
-        const sdr::position_t pos,
-        const std::size_t amount
-    ) const {
-        return closest_helper(storage[pos].positions, amount);
-    }
-
-    std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_concept(
-        const sdr::concept & concept,
-        const std::size_t amount
-    ) const {
-        return closest(concept.data, amount);
-    }
-
     template <typename WCollection>
     std::vector<std::pair<sdr::position_t, double>> async_weighted_closest_helper_pos(
         const sdr::position_t pos,
         const std::size_t amount,
         const WCollection & weights
     ) const {
-        return weighted_closest(pos, amount, weights);
+        return weighted_closest_helper(pos, amount, weights);
     }
 
     template <typename WCollection>
@@ -303,7 +320,7 @@ private:
         const std::size_t amount,
         const WCollection & weights
     ) const {
-        return weighted_closest(concept, amount, weights);
+        return weighted_closest_helper(concept, amount, weights);
     }
 
 public:
@@ -553,11 +570,6 @@ public:
         const sdr::concept & concept,
         const std::size_t amount
     ) const {
-#ifndef NDEBUG
-        for(auto & i : concept.data) {
-            assert(i < Width);
-        }
-#endif
         return closest_helper(concept.data, amount);
     }
 
@@ -575,11 +587,6 @@ public:
         const sdr::concept & concept,
         const std::size_t amount
     ) const {
-#ifndef NDEBUG
-        for(auto & i : concept.data) {
-            assert(i < Width);
-        }
-#endif
         return std::async(std::launch::async, &bank<Width>::async_closest_helper_concept, this, concept, amount);
     }
 
@@ -594,7 +601,6 @@ public:
     ) const {
 #ifndef NDEBUG
         assert(pos < storage.size());
-        assert(weights.size() == Width);
 #endif
         return weighted_closest_helper(storage[pos].positions, amount, weights);
     }
@@ -605,12 +611,6 @@ public:
         const std::size_t amount,
         const WCollection & weights
     ) const {
-#ifndef NDEBUG
-        for(auto & i : concept.data) {
-            assert(i < Width);
-        }
-        assert(weights.size() == Width);
-#endif
         return weighted_closest_helper(concept.data, amount, weights);
     }
 
