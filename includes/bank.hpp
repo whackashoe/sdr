@@ -42,38 +42,6 @@ private:
     // helpers are called from the public api
     // these just reduce code bloat
 
-    std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_pos(
-        const sdr::position_t pos,
-        const std::size_t amount
-    ) const {
-        return closest(pos, amount);
-    }
-
-    std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_concept(
-        const sdr::concept & concept,
-        const std::size_t amount
-    ) const {
-        return closest(concept, amount);
-    }
-
-    template <typename WCollection>
-    std::vector<std::pair<sdr::position_t, double>> async_weighted_closest_helper_pos(
-        const sdr::position_t pos,
-        const std::size_t amount,
-        const WCollection & weights
-    ) const {
-        return weighted_closest(pos, amount, weights);
-    }
-
-    template <typename WCollection>
-    std::vector<std::pair<sdr::position_t, double>> async_weighted_closest_helper_concept(
-        const sdr::concept & concept,
-        const std::size_t amount,
-        const WCollection & weights
-    ) const {
-        return weighted_closest(concept, amount, weights);
-    }
-
     template <typename Collection> std::size_t similarity_helper(
         const Collection & positions,
         const sdr::position_t d
@@ -225,6 +193,117 @@ private:
         }
 
         return result;
+    }
+
+    template <typename PCollection>
+    std::vector<std::pair<sdr::position_t, std::size_t>> closest_helper(
+        const PCollection & collection,
+        const std::size_t amount
+    ) const {
+        std::vector<sdr::position_t> idx(storage.size());
+        std::vector<unsigned>          v(storage.size());
+
+        // if there are less than amount in storage, just return amount that exist
+        const std::size_t partial_amount { (amount + 1 >= idx.size()) ? idx.size() : amount + 1 };
+
+        std::iota(std::begin(idx), std::end(idx), 0);
+
+        // count matching bits for each
+        for(const sdr::position_t spos : collection) {
+            for(const sdr::position_t bpos : bitmap[spos]) {
+                ++v[bpos];
+            }
+        }
+
+        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
+            const sdr::position_t a,
+            const sdr::position_t b
+        ) {
+            return v[a] > v[b];
+        });
+
+        // create std::pair for result
+        std::vector<std::pair<sdr::position_t, std::size_t>> ret;
+        ret.reserve(partial_amount);
+
+        for(std::size_t i=1; i<partial_amount; ++i) {
+            const sdr::position_t m { idx[i] };
+            ret.emplace_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
+        }
+
+        return ret;
+    }
+
+    template <typename PCollection, typename WCollection>
+    std::vector<std::pair<sdr::position_t, double>> weighted_closest_helper(
+        const PCollection collection,
+        const std::size_t amount,
+        const WCollection & weights
+    ) const {
+        std::vector<sdr::position_t> idx(storage.size());
+        std::vector<double>            v(storage.size());
+
+        // if there are less than amount in storage, just return amount that exist
+        const std::size_t partial_amount { (amount + 1 >= idx.size()) ? idx.size() : amount + 1 };
+
+        std::iota(std::begin(idx), std::end(idx), 0);
+
+        // count matching bits for each
+        for(const sdr::position_t spos : collection) {
+            for(const sdr::position_t bpos : bitmap[spos]) {
+                v[bpos] += weights[spos];
+            }
+        }
+
+        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
+            const sdr::position_t a,
+            const sdr::position_t b
+        ) {
+            return v[a] > v[b];
+        });
+
+        // create std::pair for result
+        std::vector<std::pair<sdr::position_t, double>> ret;
+        ret.reserve(partial_amount);
+
+        for(std::size_t i=1; i<partial_amount; ++i) {
+            const sdr::position_t m { idx[i] };
+            ret.emplace_back(std::make_pair(m, v[m]));
+        }
+
+        return ret;
+    }
+
+    std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_pos(
+        const sdr::position_t pos,
+        const std::size_t amount
+    ) const {
+        return closest_helper(storage[pos].positions, amount);
+    }
+
+    std::vector<std::pair<sdr::position_t, std::size_t>> async_closest_helper_concept(
+        const sdr::concept & concept,
+        const std::size_t amount
+    ) const {
+        return closest(concept.data, amount);
+    }
+
+    template <typename WCollection>
+    std::vector<std::pair<sdr::position_t, double>> async_weighted_closest_helper_pos(
+        const sdr::position_t pos,
+        const std::size_t amount,
+        const WCollection & weights
+    ) const {
+        return weighted_closest(pos, amount, weights);
+    }
+
+    template <typename WCollection>
+    std::vector<std::pair<sdr::position_t, double>> async_weighted_closest_helper_concept(
+        const sdr::concept & concept,
+        const std::size_t amount,
+        const WCollection & weights
+    ) const {
+        return weighted_closest(concept, amount, weights);
     }
 
 public:
@@ -467,41 +546,7 @@ public:
 #ifndef NDEBUG
         assert(pos < storage.size());
 #endif
-        std::vector<sdr::position_t> idx(storage.size());
-        std::vector<unsigned>          v(storage.size());
-
-        // if there are less than amount in storage, just return amount that exist
-        const std::size_t partial_amount { (amount >= idx.size()) ? idx.size() : amount };
-
-        std::iota(std::begin(idx), std::end(idx), 0);
-
-        // count matching bits for each
-        for(const sdr::position_t spos : storage[pos].positions) {
-            for(const sdr::position_t bpos : bitmap[spos]) {
-                ++v[bpos];
-            }
-        }
-
-        // we dont care about our self similarity
-        v[pos] = 0;
-
-        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
-            const sdr::position_t a,
-            const sdr::position_t b
-        ) {
-            return v[a] > v[b];
-        });
-
-        // create std::pair for result
-        std::vector<std::pair<sdr::position_t, std::size_t>> ret;
-        ret.reserve(partial_amount);
-
-        for(std::size_t i=0; i<partial_amount; ++i) {
-            const sdr::position_t m { idx[i] };
-            ret.emplace_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
-        }
-
-        return ret;
+        return closest_helper(storage[pos].positions, amount);
     }
 
     std::vector<std::pair<sdr::position_t, std::size_t>> closest(
@@ -513,44 +558,16 @@ public:
             assert(i < Width);
         }
 #endif
-        std::vector<sdr::position_t> idx(storage.size());
-        std::vector<unsigned>          v(storage.size());
-
-        // if there are less than amount in storage, just return amount that exist
-        const std::size_t partial_amount { (amount >= idx.size()) ? idx.size() : amount };
-
-        std::iota(std::begin(idx), std::end(idx), 0);
-
-        // count matching bits for each
-        for(const sdr::position_t spos : concept.data) {
-            for(const sdr::position_t bpos : bitmap[spos]) {
-                ++v[bpos];
-            }
-        }
-
-        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
-            const sdr::position_t a,
-            const sdr::position_t b
-        ) {
-            return v[a] > v[b];
-        });
-
-        // create std::pair for result
-        std::vector<std::pair<sdr::position_t, std::size_t>> ret;
-        ret.reserve(partial_amount);
-
-        for(std::size_t i=0; i<partial_amount; ++i) {
-            const sdr::position_t m { idx[i] };
-            ret.emplace_back(std::make_pair(m, static_cast<std::size_t>(v[m])));
-        }
-
-        return ret;
+        return closest_helper(concept.data, amount);
     }
 
     std::future<std::vector<std::pair<sdr::position_t, std::size_t>>> async_closest(
         const sdr::position_t pos,
         const std::size_t amount
     ) const {
+#ifndef NDEBUG
+        assert(pos < storage.size());
+#endif
         return std::async(std::launch::async, &bank<Width>::async_closest_helper_pos, this, pos, amount);
     }
 
@@ -558,6 +575,11 @@ public:
         const sdr::concept & concept,
         const std::size_t amount
     ) const {
+#ifndef NDEBUG
+        for(auto & i : concept.data) {
+            assert(i < Width);
+        }
+#endif
         return std::async(std::launch::async, &bank<Width>::async_closest_helper_concept, this, concept, amount);
     }
 
@@ -574,41 +596,7 @@ public:
         assert(pos < storage.size());
         assert(weights.size() == Width);
 #endif
-        std::vector<sdr::position_t> idx(storage.size());
-        std::vector<double>            v(storage.size());
-
-        // if there are less than amount in storage, just return amount that exist
-        const std::size_t partial_amount { (amount >= idx.size()) ? idx.size() : amount };
-
-        std::iota(std::begin(idx), std::end(idx), 0);
-
-        // count matching bits for each
-        for(const sdr::position_t spos : storage[pos].positions) {
-            for(const sdr::position_t bpos : bitmap[spos]) {
-                v[bpos] += weights[spos];
-            }
-        }
-
-        // we dont care about our self similarity
-        v[pos] = 0.0;
-
-        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
-            const sdr::position_t a,
-            const sdr::position_t b
-        ) {
-            return v[a] > v[b];
-        });
-
-        // create std::pair for result
-        std::vector<std::pair<sdr::position_t, double>> ret;
-        ret.reserve(partial_amount);
-
-        for(std::size_t i=0; i<partial_amount; ++i) {
-            const sdr::position_t m { idx[i] };
-            ret.emplace_back(std::make_pair(m, v[m]));
-        }
-
-        return ret;
+        return weighted_closest_helper(storage[pos].positions, amount, weights);
     }
 
     template <typename WCollection>
@@ -623,38 +611,7 @@ public:
         }
         assert(weights.size() == Width);
 #endif
-        std::vector<sdr::position_t> idx(storage.size());
-        std::vector<double>            v(storage.size());
-
-        // if there are less than amount in storage, just return amount that exist
-        const std::size_t partial_amount { (amount >= idx.size()) ? idx.size() : amount };
-
-        std::iota(std::begin(idx), std::end(idx), 0);
-
-        // count matching bits for each
-        for(const sdr::position_t spos : concept.data) {
-            for(const sdr::position_t bpos : bitmap[spos]) {
-                v[bpos] += weights[spos];
-            }
-        }
-
-        std::partial_sort(std::begin(idx), std::begin(idx) + partial_amount, std::end(idx), [&](
-            const sdr::position_t a,
-            const sdr::position_t b
-        ) {
-            return v[a] > v[b];
-        });
-
-        // create std::pair for result
-        std::vector<std::pair<sdr::position_t, double>> ret;
-        ret.reserve(partial_amount);
-
-        for(std::size_t i=0; i<partial_amount; ++i) {
-            const sdr::position_t m { idx[i] };
-            ret.emplace_back(std::make_pair(m, v[m]));
-        }
-
-        return ret;
+        return weighted_closest_helper(concept.data, amount, weights);
     }
 
     template <typename WCollection>
