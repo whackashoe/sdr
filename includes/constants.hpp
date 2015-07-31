@@ -2,7 +2,6 @@
 #define SDR_CONSTANTS_H_
 
 #include <sparsehash/dense_hash_set>
-#include <unordered_set>
 #include <utility>
 #include <limits>
 
@@ -18,11 +17,7 @@ constexpr std::uint32_t F_VERSION { 0x01 };
 constexpr width_t UNION_SIMILARITY_SWITCH_WIDTH { 65536 };
 
 template <typename T>
-#ifdef USE_STL_HASH
-using hash_set = std::unordered_set<T>;
-#else
 using hash_set = google::dense_hash_set<T, std::hash<T>>;
-#endif
 
 template <typename T>
 void hash_set_init(hash_set<T> & hset)
