@@ -4,6 +4,7 @@
 #include <sparsehash/dense_hash_set>
 #include <unordered_set>
 #include <utility>
+#include <limits>
 
 namespace sdr
 {
@@ -23,17 +24,11 @@ using hash_set = std::unordered_set<T>;
 using hash_set = google::dense_hash_set<T, std::hash<T>>;
 #endif
 
-void hash_set_init(hash_set<std::uint32_t> & hset)
+template <typename T>
+void hash_set_init(hash_set<T> & hset)
 {
 #ifndef USE_STL_HASH
-    hset.set_empty_key(0xFFFFFFFF);
-#endif
-}
-
-void hash_set_init(hash_set<std::uint64_t> & hset)
-{
-#ifndef USE_STL_HASH
-    hset.set_empty_key(0xFFFFFFFFFFFFFFFF);
+    hset.set_empty_key(std::numeric_limits<T>::max());
 #endif
 }
 
