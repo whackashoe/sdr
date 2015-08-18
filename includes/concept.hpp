@@ -22,7 +22,7 @@ struct concept
     std::vector<sdr::position_t> data;
 
     // for vector of positions we assume the data has already been dealt with
-    concept(const std::vector<sdr::position_t> & input)
+    explicit concept(const std::vector<sdr::position_t> & input)
     : data(input) {}
 
     // otherwise we assume that is hasn't, thus we only add non zero fields

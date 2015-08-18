@@ -19,7 +19,7 @@ struct storage_concept
     // store the positions of all set bits from 0 -> width
     sdr::hash_set<sdr::position_t> positions;
 
-    storage_concept(const sdr::concept & concept)
+    explicit storage_concept(const sdr::concept & concept)
      : positions()
     {
         sdr::hash_set_init(positions);
