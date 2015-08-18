@@ -50,7 +50,7 @@ private:
         for(auto & i : positions) {
             assert(i < Width);
         }
-        assert(d < storage.size());
+        assert(pos_b < storage.size());
 #endif
         std::size_t result { 0 };
 
