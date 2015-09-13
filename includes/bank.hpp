@@ -27,10 +27,11 @@ namespace sdr
 
 
 // this is the memory bank for the sdr memory unit
-template <sdr::width_t Width>
 class bank
 {
 private:
+    std::size_t width;
+
     // this holds our sets of vectors for easy comparison of different objects in storage
     std::vector<sdr::hash_set<sdr::position_t>> bitmap;
 
@@ -48,7 +49,7 @@ private:
     ) const {
 #ifndef NDEBUG
         for(auto & i : positions) {
-            assert(i < Width);
+            assert(i < width);
         }
         assert(pos_b < storage.size());
 #endif
@@ -69,10 +70,10 @@ private:
     ) const {
 #ifndef NDEBUG
         for(auto & i : positions) {
-            assert(i < Width);
+            assert(i < width);
         }
         assert(pos_b < storage.size());
-        assert(weights.size() == Width);
+        assert(weights.size() == width);
 #endif
         double result { 0.0f };
 
@@ -90,7 +91,7 @@ private:
     ) const {
 #ifndef NDEBUG
         for(auto & i : collection) {
-            assert(i < Width);
+            assert(i < width);
         }
         for(auto & i : positions) {
             assert(i < storage.size());
@@ -98,44 +99,28 @@ private:
 #endif
         std::size_t result { 0 };
 
-        if(Width < sdr::UNION_SIMILARITY_SWITCH_WIDTH) {
-            // this algorithm is faster for smaller Width, but much slower for large Width
-            std::bitset<Width> punions;
+        sdr::hash_set<sdr::position_t> punions;
+        sdr::hash_set_init(punions);
 
-            for(const sdr::position_t ppos : positions) {
-                for(const sdr::position_t spos : storage[ppos].positions) {
-                    punions.set(spos);
-                }
+        for(const sdr::position_t ppos : positions) {
+            for(const sdr::position_t spos : storage[ppos].positions) {
+                punions.insert(spos);
+            }
+        }
+
+        auto vit = punions.begin();
+        for(auto cit = collection.begin(); vit != punions.end() && cit != collection.end(); ++cit) {
+            sdr::position_t deref { (*vit) };
+            const sdr::position_t cmp { (*cit) };
+
+            while(deref < cmp && vit != punions.end()) {
+                ++vit;
+                deref = (*vit);
             }
 
-            for(const sdr::position_t cmp : collection) {
-                result += punions[cmp];
-            }
-
-        } else {
-            sdr::hash_set<sdr::position_t> punions;
-            sdr::hash_set_init(punions);
-
-            for(const sdr::position_t ppos : positions) {
-                for(const sdr::position_t spos : storage[ppos].positions) {
-                    punions.insert(spos);
-                }
-            }
-
-            auto vit = punions.begin();
-            for(auto cit = collection.begin(); vit != punions.end() && cit != collection.end(); ++cit) {
-                sdr::position_t deref { (*vit) };
-                const sdr::position_t cmp { (*cit) };
-
-                while(deref < cmp && vit != punions.end()) {
-                    ++vit;
-                    deref = (*vit);
-                }
-
-                if(deref == cmp) {
-                    ++result;
-                    ++vit;
-                }
+            if(deref == cmp) {
+                ++result;
+                ++vit;
             }
         }
 
@@ -150,51 +135,37 @@ private:
     ) const {
 #ifndef NDEBUG
         for(auto & i : collection) {
-            assert(i < Width);
+            assert(i < width);
         }
         for(auto & i : positions) {
             assert(i < storage.size());
         }
-        assert(weights.size() == Width);
+        assert(weights.size() == width);
 #endif
         double result { 0.0f };
 
-        if(Width < sdr::UNION_SIMILARITY_SWITCH_WIDTH) {
-            std::bitset<Width> punions;
+        sdr::hash_set<sdr::position_t> punions;
+        sdr::hash_set_init(punions);
 
-            for(const sdr::position_t ppos : positions) {
-                for(const sdr::position_t spos : storage[ppos].positions) {
-                    punions.set(spos);
-                }
+        for(const sdr::position_t ppos : positions) {
+            for(const sdr::position_t spos : storage[ppos].positions) {
+                punions.insert(spos);
+            }
+        }
+
+        auto vit = punions.begin();
+        for(auto cit = collection.begin(); vit != punions.end() && cit != collection.end(); ++cit) {
+            sdr::position_t deref { (*vit) };
+            const sdr::position_t cmp { (*cit) };
+
+            while(deref < cmp && vit != punions.end()) {
+                ++vit;
+                deref = (*vit);
             }
 
-            for(const sdr::position_t cmp : collection) {
-                result += punions[cmp] * weights[cmp];
-            }
-        } else {
-            sdr::hash_set<sdr::position_t> punions;
-            sdr::hash_set_init(punions);
-
-            for(const sdr::position_t ppos : positions) {
-                for(const sdr::position_t spos : storage[ppos].positions) {
-                    punions.insert(spos);
-                }
-            }
-
-            auto vit = punions.begin();
-            for(auto cit = collection.begin(); vit != punions.end() && cit != collection.end(); ++cit) {
-                sdr::position_t deref { (*vit) };
-                const sdr::position_t cmp { (*cit) };
-
-                while(deref < cmp && vit != punions.end()) {
-                    ++vit;
-                    deref = (*vit);
-                }
-
-                if(deref == cmp) {
-                    result += weights[cmp];
-                    ++vit;
-                }
+            if(deref == cmp) {
+                result += weights[cmp];
+                ++vit;
             }
         }
 
@@ -208,7 +179,7 @@ private:
     ) const {
 #ifndef NDEBUG
         for(auto & i : collection) {
-            assert(i < Width);
+            assert(i < width);
         }
 #endif
         std::vector<sdr::position_t> idx(storage.size());
@@ -267,9 +238,9 @@ private:
     ) const {
 #ifndef NDEBUG
         for(auto & i : collection) {
-            assert(i < Width);
+            assert(i < width);
         }
-        assert(weights.size() == Width);
+        assert(weights.size() == width);
 #endif
         std::vector<sdr::position_t> idx(storage.size());
         std::vector<double>            v(storage.size());
@@ -324,8 +295,25 @@ private:
     }
 
 public:
-    bank() : bitmap(Width), storage()
+    bank(const std::size_t width)
+    : width(width)
+    , bitmap(width)
+    , storage()
     {
+        for(auto & i : bitmap) {
+            sdr::hash_set_init(i);
+        }
+    }
+
+    // this automatically clears before changing width
+    void resize(const std::size_t new_width)
+    {
+        clear();
+
+        width = new_width;
+        bitmap = std::vector<sdr::hash_set<sdr::position_t>>(new_width);
+        storage = std::vector<sdr::storage_concept>();
+
         for(auto & i : bitmap) {
             sdr::hash_set_init(i);
         }
@@ -352,7 +340,7 @@ public:
         write(sdr::F_VERSION);
 
         // width
-        write(static_cast<std::uint32_t>(Width));
+        write(static_cast<std::uint32_t>(width));
 
         //storage
         write(static_cast<std::uint32_t>(storage.size()));
@@ -403,12 +391,14 @@ public:
 
 
         // width
-        const std::uint32_t width { read() };
+        const std::uint32_t w { read() };
 
-        if(width != Width) {
-            std::cout << "wrong width. found: " << width  << " expected: " << Width << std::endl;
+        if(w != width) {
+            std::cout << "wrong width. found: " << w  << " expected: " << width << std::endl;
             return false;
         }
+
+        resize(w);
 
         // storage
         const std::size_t storage_size { read() };
@@ -433,7 +423,7 @@ public:
     {
 #ifndef NDEBUG
         for(auto & i : concept.data) {
-            assert(i < Width);
+            assert(i < width);
         }
 #endif
         storage.emplace_back(sdr::storage_concept(concept));
@@ -454,7 +444,7 @@ public:
 #ifndef NDEBUG
         assert(pos < storage.size());
         for(auto & i : concept.data) {
-            assert(i < Width);
+            assert(i < width);
         }
 #endif
         sdr::storage_concept & storage_concept { storage[pos] };
@@ -580,14 +570,14 @@ public:
 #ifndef NDEBUG
         assert(pos < storage.size());
 #endif
-        return std::async(std::launch::async, &bank<Width>::async_closest_helper_pos, this, pos, amount);
+        return std::async(std::launch::async, &bank::async_closest_helper_pos, this, pos, amount);
     }
 
     std::future<std::vector<std::pair<sdr::position_t, std::size_t>>> async_closest(
         const sdr::concept & concept,
         const std::size_t amount
     ) const {
-        return std::async(std::launch::async, &bank<Width>::async_closest_helper_concept, this, concept, amount);
+        return std::async(std::launch::async, &bank::async_closest_helper_concept, this, concept, amount);
     }
 
     // find most similar to object at pos
@@ -620,7 +610,7 @@ public:
         const std::size_t amount,
         const WCollection & weights
     ) const {
-        return std::async(std::launch::async, &bank<Width>::async_weighted_closest_helper_pos, this, pos, amount, weights);
+        return std::async(std::launch::async, &bank::async_weighted_closest_helper_pos, this, pos, amount, weights);
     }
 
     template <typename WCollection>
@@ -629,7 +619,7 @@ public:
         const std::size_t amount,
         const WCollection & weights
     ) const {
-        return std::async(std::launch::async, &bank<Width>::async_weighted_closest_helper_concept, this, concept, amount, weights);
+        return std::async(std::launch::async, &bank::async_weighted_closest_helper_concept, this, concept, amount, weights);
     }
 
     // return all items matching all in data
@@ -637,7 +627,7 @@ public:
     {
 #ifndef NDEBUG
         for(auto & i : concept.data) {
-            assert(i < Width);
+            assert(i < width);
         }
 #endif
         sdr::hash_set<sdr::position_t> matching;
@@ -666,7 +656,7 @@ public:
     ) const {
 #ifndef NDEBUG
         for(auto & i : concept.data) {
-            assert(i < Width);
+            assert(i < width);
         }
 #endif
         sdr::hash_set<sdr::position_t> matching;
@@ -698,9 +688,9 @@ public:
     ) const {
 #ifndef NDEBUG
         for(auto & i : concept.data) {
-            assert(i < Width);
+            assert(i < width);
         }
-        assert(weights.size() == Width);
+        assert(weights.size() == width);
 #endif
         sdr::hash_set<sdr::position_t> matching;
         sdr::hash_set_init(matching);

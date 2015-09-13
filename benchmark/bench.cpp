@@ -11,12 +11,12 @@ std::chrono::system_clock::duration since_epoch()
 
 int main()
 {
-    constexpr std::size_t Amount = 100000;
+    constexpr std::size_t Amount = 1000000;
     constexpr sdr::width_t Width = 2048;
     constexpr std::size_t ParallelAmount = 100;
-    constexpr double OnPercent = 0.02;
+    constexpr double OnPercent = 0.01;
 
-    sdr::bank<Width> memory;
+    sdr::bank memory(Width);
     std::vector<std::vector<sdr::position_t>> fields;
 
     std::vector<double> weights(Width, 1.1);
@@ -132,7 +132,7 @@ int main()
     }
 
     {
-        std::vector<std::size_t> simlist(10);
+        std::vector<std::size_t> simlist(1000);
         std::iota(simlist.begin(), simlist.end(), 1);
 
         auto start = since_epoch();
