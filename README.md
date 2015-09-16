@@ -55,5 +55,7 @@ Matching is finding concepts that match each of the traits/bits in a list.
 
 
  * google sparsehash: https://code.google.com/p/sparsehash/
+ * gnu readline: http://savannah.gnu.org/git/?group=readline
+ * libsocket++: https://github.com/dermesser/libsocket
  * c++11 compiler (gcc or clang will do)
 
