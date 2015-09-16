@@ -471,7 +471,7 @@ public:
         }
     }
 
-    std::size_t storage_size() const
+    std::size_t get_storage_size() const
     {
         return storage.size();
     }
