@@ -476,6 +476,11 @@ public:
         return storage.size();
     }
 
+    std::size_t get_width() const
+    {
+        return width;
+    }
+
     // find amount of matching bits between two vectors
     std::size_t similarity(
         const sdr::position_t a,
