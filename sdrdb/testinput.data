@@ -1,0 +1,9 @@
+create database test 1000
+put into test 10 20 30 40 50
+put into test 1 2 3 4 5
+put into test 1 2 3 41 51
+put into test 1 20 30 40 51
+query closest from test 5 1
+query similarity from test 1 2
+query usimilarity from test 0 1 2 3
+query matching from test 2
