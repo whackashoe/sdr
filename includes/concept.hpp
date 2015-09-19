@@ -66,6 +66,6 @@ struct concept
     }
 };
 
-}; //namespace sdr
+} //namespace sdr
 
 #endif
