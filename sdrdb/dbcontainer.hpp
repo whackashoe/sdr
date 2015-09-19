@@ -30,7 +30,7 @@ struct dbcontainer
     , bank(sdr::bank(width))
     {}
 
-    void render_list()
+    void render_list() const
     {
         std::cout
             << "width: " << bank.get_width() << std::endl
