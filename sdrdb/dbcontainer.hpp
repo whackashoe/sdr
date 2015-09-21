@@ -29,13 +29,6 @@ struct dbcontainer
     : name(name)
     , bank(sdr::bank(width))
     {}
-
-    void render_list() const
-    {
-        std::cout
-            << "width: " << bank.get_width() << std::endl
-            << "rows:  " << bank.get_storage_size() << std::endl;
-    }
 };
 
 #endif

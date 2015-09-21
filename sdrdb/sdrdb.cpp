@@ -38,6 +38,7 @@
 
 bool running { true };
 bool interactive_mode { true };
+bool verbose { true };
 std::unordered_map<std::string, dbcontainer> databases;
 
 
@@ -226,7 +227,9 @@ bool create_database(const std::string & name, const std::size_t width)
     // add empty row for 0
     databases[name].bank.insert(sdr::concept({}));
 
-    std::cout << "database " << name << " created" << std::endl;
+    if(verbose) {
+        std::cout << "database " << name << " created" << std::endl;
+    }
 
     return true;
 }
@@ -236,14 +239,20 @@ bool drop_database(const dbcontainer & db_it)
     const std::string & db_name { db_it.name };
     databases.erase(db_name);
 
-    std::cout << "database " << db_name << " dropped" << std::endl;
+    if(verbose) {
+        std::cout << "database " << db_name << " dropped" << std::endl;
+    }
 
     return true;
 }
 
 bool list(const dbcontainer & db_it)
 {
-    db_it.render_list();
+    if(verbose) {
+        std::cout
+            << "width: " << db_it.bank.get_width() << std::endl
+            << "rows:  " << db_it.bank.get_storage_size() << std::endl;
+    }
 
     return true;
 }
@@ -254,7 +263,9 @@ bool clear(dbcontainer & db_it)
 
     db_it.bank.clear();
 
-    std::cout << "database " << db_name << " cleared" << std::endl;
+    if(verbose) {
+        std::cout << "database " << db_name << " cleared" << std::endl;
+    }
 
     return true;
 }
@@ -265,7 +276,9 @@ bool resize(dbcontainer & db_it, const std::size_t width)
 
     db_it.bank.resize(width);
 
-    std::cout << "database " << db_name << " resized" << std::endl;
+    if(verbose) {
+        std::cout << "database " << db_name << " resized" << std::endl;
+    }
 
     return true;
 }
@@ -306,7 +319,7 @@ bool rename_concept(dbcontainer & db_it, const std::string & name, const std::st
     return true;
 }
 
-bool insert(dbcontainer & db_it, const std::string & concept_name, const std::vector<std::size_t> & concept_positions)
+std::size_t insert(dbcontainer & db_it, const std::string & concept_name, const std::vector<std::size_t> & concept_positions)
 {
     const auto t_start = since_epoch();
 
@@ -319,9 +332,11 @@ bool insert(dbcontainer & db_it, const std::string & concept_name, const std::ve
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
-    std::cout << "OK, concept " << position << " created (" << t_ms << "μs)" << std::endl;
+    if(verbose) {
+        std::cout << "OK, concept " << position << " created (" << t_ms << "μs)" << std::endl;
+    }
 
-    return true;
+    return position;
 }
 
 bool update(dbcontainer & db_it, const std::size_t concept_id, const std::vector<std::size_t> & concept_positions)
@@ -333,7 +348,9 @@ bool update(dbcontainer & db_it, const std::size_t concept_id, const std::vector
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
-    std::cout << "OK, concept " << concept_id << " affected (" << t_ms << "μs)" << std::endl;
+    if(verbose) {
+        std::cout << "OK, concept " << concept_id << " affected (" << t_ms << "μs)" << std::endl;
+    }
 
     return true;
 }
@@ -347,8 +364,10 @@ std::size_t similarity(const dbcontainer & db_it, const std::size_t concept_a_id
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
-    std::cout << result << std::endl;
-    std::cout << "OK, 2 concepts compared (" << t_ms << "μs)" << std::endl;
+    if(verbose) {
+        std::cout << result << std::endl;
+        std::cout << "OK, 2 concepts compared (" << t_ms << "μs)" << std::endl;
+    }
 
     return result;
 }
@@ -362,8 +381,10 @@ std::size_t usimilarity(const dbcontainer & db_it, const std::size_t concept_id,
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
-    std::cout << result << std::endl;
-    std::cout << "OK, " << (1 + concept_positions.size()) << " concepts compared (" << t_ms << "μs)" << std::endl;
+    if(verbose) {
+        std::cout << result << std::endl;
+        std::cout << "OK, " << (1 + concept_positions.size()) << " concepts compared (" << t_ms << "μs)" << std::endl;
+    }
 
     return result;
 }
@@ -377,18 +398,20 @@ std::vector<std::pair<std::size_t, std::size_t>> closest(const dbcontainer & db_
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
-    std::cout << "[";
-    for(std::size_t i=0; i<results.size(); ++i) {
-        const std::pair<std::size_t, std::size_t> item { results[i] };
+    if(verbose) {
+        std::cout << "[";
+        for(std::size_t i=0; i<results.size(); ++i) {
+            const std::pair<std::size_t, std::size_t> item { results[i] };
 
-        std::cout << "[" << item.first << ":" << item.second << "]";
-        if(i != results.size() - 1) {
-            std::cout << ",";
+            std::cout << "[" << item.first << ":" << item.second << "]";
+            if(i != results.size() - 1) {
+                std::cout << ",";
+            }
         }
-    }
-    std::cout << "]" << std::endl;
+        std::cout << "]" << std::endl;
 
-    std::cout << "OK, " << amount << " concepts sorted (" << t_ms << "μs)" << std::endl;
+        std::cout << "OK, " << amount << " concepts sorted (" << t_ms << "μs)" << std::endl;
+    }
 
     return results;
 }
@@ -402,18 +425,20 @@ std::vector<std::size_t> matching(const dbcontainer & db_it, const std::vector<s
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
-    std::cout << "[";
-    for(std::size_t i=0; i<results.size(); ++i) {
-        const std::size_t item { results[i] };
+    if(verbose) {
+        std::cout << "[";
+        for(std::size_t i=0; i<results.size(); ++i) {
+            const std::size_t item { results[i] };
 
-        std::cout << item;
-        if(i != results.size() - 1) {
-            std::cout << ",";
+            std::cout << item;
+            if(i != results.size() - 1) {
+                std::cout << ",";
+            }
         }
-    }
-    std::cout << "]" << std::endl;
+        std::cout << "]" << std::endl;
 
-    std::cout << "OK, " << (results.size()) << " concepts matched (" << t_ms << "μs)" << std::endl;
+        std::cout << "OK, " << (results.size()) << " concepts matched (" << t_ms << "μs)" << std::endl;
+    }
 
     return results;
 }
@@ -427,18 +452,20 @@ std::vector<std::size_t> matchingx(const dbcontainer & db_it, const std::size_t 
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
-    std::cout << "[";
-    for(std::size_t i=0; i<results.size(); ++i) {
-        const std::size_t item { results[i] };
+    if(verbose) {
+        std::cout << "[";
+        for(std::size_t i=0; i<results.size(); ++i) {
+            const std::size_t item { results[i] };
 
-        std::cout << item;
-        if(i != results.size() - 1) {
-            std::cout << ",";
+            std::cout << item;
+            if(i != results.size() - 1) {
+                std::cout << ",";
+            }
         }
-    }
-    std::cout << "]" << std::endl;;
+        std::cout << "]" << std::endl;;
 
-    std::cout << "OK, " << (results.size()) << " concepts matched (" << t_ms << "μs)" << std::endl;
+        std::cout << "OK, " << (results.size()) << " concepts matched (" << t_ms << "μs)" << std::endl;
+    }
 
     return results;
 }
@@ -476,8 +503,6 @@ void parse_input(const std::string & input)
 
     if(command == "help") {
         render_help();
-    } else if(command == "exit") {
-        exit_console();
     } else if(command == "create") {
         if(! argument_length_check_eq(pieces, 4)) {
             return;
@@ -844,7 +869,15 @@ bool inputloop()
     sinput = trim(sinput);
 
     if(sinput.length() > 0) {
-        parse_input(sinput);
+        if(sinput.length() == 1) {
+            if(sinput == "help") {
+                render_help();
+            } else if(sinput == "exit") {
+                exit_console();
+            }
+        } else {
+            parse_input(sinput);
+        }
 
         if(interactive_mode) {
             add_history(input);
