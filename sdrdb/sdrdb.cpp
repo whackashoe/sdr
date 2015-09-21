@@ -40,7 +40,6 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-bool running { true };
 bool interactive_mode { true };
 bool verbose { true };
 std::unordered_map<std::string, dbcontainer> databases;
@@ -223,7 +222,6 @@ void render_help()
 void exit_console()
 {
     std::cout << "Goodbye :)" << std::endl;
-    running = false;
 }
 
 bool create_database(const std::string & name, const std::size_t width)
@@ -956,6 +954,7 @@ bool inputloop()
                 render_help();
             } else if(sinput == "exit") {
                 exit_console();
+                return false;
             }
         } else {
             parse_input(sinput);
@@ -967,12 +966,6 @@ bool inputloop()
     }
 
     return true;
-}
-
-void error(const char * msg)
-{
-    std::cerr << msg << std::endl;
-    exit(1);
 }
 
 void display_usage()
@@ -1056,6 +1049,7 @@ int main(int argc, char ** argv)
                 bindpath = optarg;
                 break;
             case '?':
+                std::cerr << "sdrdb: invalid option" << std::endl;
                 display_usage();
                 return EXIT_FAILURE;
             default:
@@ -1075,9 +1069,9 @@ int main(int argc, char ** argv)
             << std::endl
             << "Type 'help' for help." << std::endl
             << std::endl;
-    }
 
-    while(running && inputloop());
+        while(running && inputloop());
+    }
 
     return EXIT_SUCCESS;
 }
