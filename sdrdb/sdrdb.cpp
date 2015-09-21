@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <type_traits>
+#include <cstddef>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -23,7 +25,8 @@
 
 #include "../includes/sdr.hpp"
 #include "dbcontainer.hpp"
-
+#include "resultcontainer.hpp"
+#include "checkresult.hpp"
 
 #ifndef SDRDB_VERSION
 #define SDRDB_VERSION "0.1-alpha"
@@ -90,13 +93,19 @@ std::string tolower(const std::string & s)
     return ret;
 }
 
-void render_error(const std::string & s, const std::string & piece)
+resultcontainer render_error(const std::string & s, const std::string & piece)
 {
-    std::cerr
-        << (interactive_mode ? ANSI_COLOR_RED : "") << s
+    std::stringstream ss;
+    ss << (interactive_mode ? ANSI_COLOR_RED : "") << s
         << (interactive_mode ? ANSI_COLOR_YELLOW : "") << " => "
         << (interactive_mode ? ANSI_COLOR_RESET : "") << piece
         << std::endl;
+
+    const std::string rstr { ss.str() };
+
+    std::cerr << rstr;
+
+    return resultcontainer(rstr);
 }
 
 std::size_t get_trait_id(const dbcontainer & db_it, const std::string & str)
@@ -141,49 +150,45 @@ std::vector<std::size_t> concept_str_to_pos(const dbcontainer & db_it, const std
     return concept_positions;
 }
 
-bool syntax_eq_check(const std::string & a, const std::string & b)
+checkresult syntax_eq_check(const std::string & a, const std::string & b)
 {
     if(a != tolower(b)) {
         std::stringstream ss;
         ss << "expected: " << a << " encountered: " << b;
-        render_error("bad syntax", ss.str());
-        return false;
+        return checkresult(render_error("bad syntax", ss.str()));
     } else {
-        return true;
+        return checkresult(true);
     }
 }
 
-bool number_check(const std::string & str)
+checkresult number_check(const std::string & str)
 {
     if(! is_number(str)) {
-        render_error("not a number", str);
-        return false;
+        return checkresult(render_error("not a number", str));
     } else {
-        return true;
+        return checkresult(true);
     }
 }
 
-bool argument_length_check_lt(const std::vector<std::string> & pieces, const std::size_t len)
+checkresult argument_length_check_lt(const std::vector<std::string> & pieces, const std::size_t len)
 {
     if(pieces.size() < len) {
         std::stringstream ss;
         ss << "expected: " << len << " encountered: " << pieces.size();
-        render_error("wrong number of arguments", ss.str());
-        return false;
+        return checkresult(render_error("wrong number of arguments", ss.str()));
     } else {
-        return true;
+        return checkresult(true);
     }
 }
 
-bool argument_length_check_eq(const std::vector<std::string> & pieces, const std::size_t len)
+checkresult argument_length_check_eq(const std::vector<std::string> & pieces, const std::size_t len)
 {
     if(pieces.size() != len) {
         std::stringstream ss;
         ss << "expected: " << len << " encountered: " << pieces.size();
-        render_error("wrong number of arguments", ss.str());
-        return false;
+        return checkresult(render_error("wrong number of arguments", ss.str()));
     } else {
-        return true;
+        return checkresult(true);
     }
 }
 
@@ -471,7 +476,7 @@ std::vector<std::size_t> matchingx(const dbcontainer & db_it, const std::size_t 
     return results;
 }
 
-void parse_input(const std::string & input)
+resultcontainer parse_input(const std::string & input)
 {
     std::istringstream iss(input);
 
@@ -492,107 +497,135 @@ void parse_input(const std::string & input)
     // empty input shouldnt be passed here to start with
     // but.. how can we trust that?
     if(pieces.size() == 0) {
-        return;
+        return resultcontainer();
     }
 
     // comment
     if(pieces[0][0] == '#') {
-        return;
+        return resultcontainer();
     }
 
     const std::string & command { tolower(pieces[0]) };
 
-    if(command == "help") {
-        render_help();
-    } else if(command == "create") {
-        if(! argument_length_check_eq(pieces, 4)) {
-            return;
+    if(command == "create") {
+        {
+            checkresult check { argument_length_check_eq(pieces, 4) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
-        if(! syntax_eq_check("database", pieces[1])) {
-            return;
+        {
+            checkresult check { syntax_eq_check("database", pieces[1]) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & db_name  { pieces[2] };
         const std::string & db_width { pieces[3] };
-        if(! number_check(db_width)) {
-            return;
+
+        {
+            checkresult check { number_check(db_width) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::size_t width { static_cast<std::size_t>(std::stoi(db_width, nullptr)) };
 
-        create_database(db_name, width);
+        return resultcontainer(create_database(db_name, width));
     } else if(command == "drop") {
-        if(! argument_length_check_eq(pieces, 3)) {
-            return;
+        {
+            checkresult check { argument_length_check_eq(pieces, 3) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
-        if(! syntax_eq_check("database", pieces[1])) {
-            return;
+        {
+            checkresult check { syntax_eq_check("database", pieces[1]) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & db_name { pieces[2] };
 
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
 
-        drop_database(db->second);
+        return resultcontainer(drop_database(db->second));
     } else if(command == "list") {
-        if(! argument_length_check_eq(pieces, 2)) {
-            return;
+        {
+            checkresult check { argument_length_check_eq(pieces, 2) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & db_name { pieces[1] };
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
 
-        list(db->second);
+        return resultcontainer(list(db->second));
     } else if(command == "clear") {
-        if(! argument_length_check_eq(pieces, 2)) {
-            return;
+        {
+            checkresult check { argument_length_check_eq(pieces, 2) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & db_name { pieces[1] };
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
 
-        clear(db->second);
+        return resultcontainer(clear(db->second));
      } else if(command == "resize") {
-        if(! argument_length_check_eq(pieces, 3)) {
-            return;
+        {
+            checkresult check { argument_length_check_eq(pieces, 3) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & db_name { pieces[1] };
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
 
         const std::string & db_width { pieces[2] };
-        if(! number_check(db_width)) {
-            return;
+        {
+            checkresult check { number_check(db_width) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::size_t width { static_cast<std::size_t>(std::stoi(db_width, nullptr)) };
 
-        resize(db->second, width);
+        return resultcontainer(resize(db->second, width));
     } else if(command == "name") {
-        if(! argument_length_check_eq(pieces, 6)) {
-            return;
+        {
+            checkresult check { argument_length_check_eq(pieces, 6) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
-        if(! syntax_eq_check("in", pieces[4])) {
-            return;
+        {
+            checkresult check { syntax_eq_check("in", pieces[4]) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & ttype { tolower(pieces[1]) };
@@ -600,13 +633,15 @@ void parse_input(const std::string & input)
         const bool is_concept     { ttype == "concept" };
 
         if(! is_trait && ! is_concept) {
-             render_error("bad syntax", pieces[1]);
-             return;
+             return render_error("bad syntax", pieces[1]);
         }
 
         const std::string & item_pos { pieces[2] };
-        if(! number_check(item_pos)) {
-            return;
+        {
+            checkresult check { number_check(item_pos) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & item_name  { pieces[3] };
@@ -614,37 +649,42 @@ void parse_input(const std::string & input)
 
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
         dbcontainer & db_it { db->second };
 
         if(is_trait) {
             const std::size_t trait_id  { get_trait_id(db_it, item_pos) };
             if(! trait_id) {
-                render_error("trait not found", item_name);
-                return;
+                return render_error("trait not found", item_name);
             }
 
-            name_trait(db_it, trait_id, item_name);
+            return resultcontainer(name_trait(db_it, trait_id, item_name));
         }
 
         if(is_concept) {
             const std::size_t concept_id  { get_concept_id(db_it, item_pos) };
             if(! concept_id) {
-                render_error("concept not found", item_name);
-                return;
+                return render_error("concept not found", item_name);
             }
 
-            name_concept(db_it, concept_id, item_name);
-        }
-     } else if(command == "rename") {
-        if(! argument_length_check_eq(pieces, 6)) {
-            return;
+            return resultcontainer(name_concept(db_it, concept_id, item_name));
         }
 
-        if(! syntax_eq_check("in", pieces[4])) {
-            return;
+        return resultcontainer(); // to suppress warning
+     } else if(command == "rename") {
+        {
+            checkresult check { argument_length_check_eq(pieces, 6) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
+        }
+
+        {
+            checkresult check { syntax_eq_check("in", pieces[4]) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & ttype { tolower(pieces[1]) };
@@ -652,8 +692,7 @@ void parse_input(const std::string & input)
         const bool is_concept     { ttype == "concept" };
 
         if(! is_trait && ! is_concept) {
-            render_error("bad syntax", ttype);
-            return;
+            return render_error("bad syntax", ttype);
         }
 
         const std::string & item_name    { pieces[2] };
@@ -662,70 +701,92 @@ void parse_input(const std::string & input)
 
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
         dbcontainer & db_it { db->second };
 
         if(is_trait) {
             if(! get_trait_id(db_it, item_name)) {
-                render_error("trait not found", item_name);
-                return;
+                return render_error("trait not found", item_name);
             }
 
-            rename_trait(db_it, item_name, item_newname);
+            return resultcontainer(rename_trait(db_it, item_name, item_newname));
         }
 
         if(is_concept) {
             if(! get_concept_id(db_it, item_name)) {
                 render_error("concept not found", item_name);
-                return;
+                return resultcontainer();
             }
 
-            rename_concept(db_it, item_name, item_newname);
-        }
-     } else if(command == "put") {
-        if(! argument_length_check_lt(pieces, 4)) {
-            return;
+            return resultcontainer(rename_concept(db_it, item_name, item_newname));
         }
 
-        if(! syntax_eq_check("into", pieces[1])) {
-            return;
+        return resultcontainer(); // to suppress warning
+     } else if(command == "put") {
+        {
+            checkresult check { argument_length_check_lt(pieces, 4) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
+        }
+
+        {
+            checkresult check { syntax_eq_check("into", pieces[1]) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & db_name { pieces[2] };
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
         dbcontainer & db_it { db->second };
 
         const bool named                 { tolower(pieces[3]) == "as" };
         const std::string & concept_name { named ? pieces[4] : "" };
 
-        if(named && ! argument_length_check_lt(pieces, 5)) {
-            render_error("wrong number of arguments", command);
-            return;
+        if(named) {
+            {
+                checkresult check { argument_length_check_lt(pieces, 5) };
+                if(! check) {
+                    return resultcontainer(check.get_rc());
+                }
+            }
         }
 
         const std::vector<std::string> concept_strs(std::begin(pieces) + (named ? 5 : 3), std::end(pieces));;
         const std::vector<std::size_t> concept_positions { concept_str_to_pos(db_it, concept_strs) };
 
-        insert(db_it, concept_name, concept_positions);
+        return resultcontainer(insert(db_it, concept_name, concept_positions));
      }  else if(command == "update") {
-        if(   ! argument_length_check_lt(pieces, 4)
-           || ! syntax_eq_check("concept", pieces[1])
-           || ! syntax_eq_check("from", pieces[3]))
         {
-            return;
+            checkresult check { argument_length_check_lt(pieces, 4) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
+        }
+
+        {
+            checkresult check { syntax_eq_check("concept", pieces[1]) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
+        }
+
+        {
+            checkresult check { syntax_eq_check("from", pieces[3]) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & db_name { pieces[4] };
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
         dbcontainer & db_it { db->second };
 
@@ -733,128 +794,148 @@ void parse_input(const std::string & input)
         const std::string & concept_name { concept_str };
         const std::size_t   concept_id   { get_concept_id(db_it, concept_name) };
         if(! concept_id) {
-            render_error("concept not found", concept_str);
-            return;
+            return render_error("concept not found", concept_str);
         }
         const std::vector<std::string> concept_strs(std::begin(pieces) + 5, std::end(pieces));
         const std::vector<std::size_t> concept_positions { concept_str_to_pos(db_it, concept_strs) };
 
-        update(db_it, concept_id, concept_positions);
+        return resultcontainer(update(db_it, concept_id, concept_positions));
      } else if(command == "query") {
-        if(! argument_length_check_lt(pieces, 4)) {
-            return;
+        {
+            checkresult check { argument_length_check_lt(pieces, 4) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const bool weighted         { tolower(pieces[1]) == "weighted" };
         const std::size_t qtype_pos { static_cast<std::size_t>(weighted ? 2 : 1) };
 
         const std::string & qtype { pieces[qtype_pos] };
-        if(! syntax_eq_check("from", pieces[qtype_pos + 1])) {
-            return;
+        {
+            checkresult check { syntax_eq_check("from", pieces[qtype_pos + 1]) };
+            if(! check) {
+                return resultcontainer(check.get_rc());
+            }
         }
 
         const std::string & db_name { pieces[qtype_pos + 2] };
         const auto db = databases.find(db_name);
         if(db == databases.end()) {
-            render_error("database not found", db_name);
-            return;
+            return render_error("database not found", db_name);
         }
         const dbcontainer & db_it { db->second };
 
         if(qtype == "similarity") {
-            if(! argument_length_check_eq(pieces, qtype_pos + 5)) {
-                return;
+            {
+                checkresult check { argument_length_check_eq(pieces, qtype_pos + 5) };
+                if(! check) {
+                    return resultcontainer(check.get_rc());
+                }
             }
 
             const std::string & concept_a_str { pieces[qtype_pos + 3] };
             const std::size_t   concept_a_id  { get_concept_id(db_it, concept_a_str) };
             if(! concept_a_id) {
-                render_error("concept not found", concept_a_str);
-                return;
+                return render_error("concept not found", concept_a_str);
             }
 
             const std::string & concept_b_str { pieces[qtype_pos + 4] };
             const std::size_t   concept_b_id  { get_concept_id(db_it, concept_b_str) };
             if(! concept_b_id) {
-                render_error("concept not found", concept_b_str);
-                return;
+                return render_error("concept not found", concept_b_str);
             }
 
-            similarity(db_it, concept_a_id, concept_b_id);
+            return resultcontainer(similarity(db_it, concept_a_id, concept_b_id));
         } else if(qtype == "usimilarity") {
-            if(! argument_length_check_lt(pieces, qtype_pos + 5)) {
-                return;
+            {
+                checkresult check { argument_length_check_lt(pieces, qtype_pos + 5) };
+                if(! check) {
+                    return resultcontainer(check.get_rc());
+                }
             }
 
             const std::string & concept_str { pieces[qtype_pos + 3] };
             const std::size_t   concept_id  { get_concept_id(db_it, concept_str) };
             if(! concept_id) {
-                render_error("concept not found", concept_str);
-                return;
+                return render_error("concept not found", concept_str);
             }
             const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 4, std::end(pieces));
             const std::vector<std::size_t> concept_positions { concept_str_to_pos(db_it, concept_strs) };
 
-            usimilarity(db_it, concept_id, concept_positions);
+            return resultcontainer(usimilarity(db_it, concept_id, concept_positions));
         } else if(qtype == "closest") {
-            if(! argument_length_check_eq(pieces, qtype_pos + 5)) {
-                return;
+            {
+                checkresult check { argument_length_check_eq(pieces, qtype_pos + 5) };
+                if(! check) {
+                    return resultcontainer(check.get_rc());
+                }
             }
 
             const std::string & amount_str { pieces[qtype_pos + 3] };
-            if(! number_check(amount_str)) {
-                return;
+            {
+                checkresult check { number_check(amount_str) };
+                if(! check) {
+                    return resultcontainer(check.get_rc());
+                }
             }
 
             const std::size_t   amount      { static_cast<std::size_t>(std::stoi(amount_str)) };
             const std::string & concept_str { pieces[qtype_pos + 4] };
             const std::size_t   concept_id  { get_concept_id(db_it, concept_str) };
             if(! concept_id) {
-                render_error("concept not found", concept_str);
-                return;
+                return render_error("concept not found", concept_str);
             }
 
-            closest(db_it, amount, concept_id);
+            return resultcontainer(closest(db_it, amount, concept_id));
         } else if(qtype == "matching") {
             if(weighted) {
-                render_error("matching cannot be weighted", pieces[1]);
-                return;
+                return render_error("matching cannot be weighted", pieces[1]);
             }
 
-            if(! argument_length_check_lt(pieces, qtype_pos + 4)) {
-                return;
+            {
+                checkresult check { argument_length_check_eq(pieces, qtype_pos + 4) };
+                if(! check) {
+                    return resultcontainer(check.get_rc());
+                }
             }
 
             const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 3, std::end(pieces));
             const std::vector<std::size_t> concept_positions { concept_str_to_pos(db_it, concept_strs) };
 
 
-            matching(db_it, concept_positions);
+            return resultcontainer(matching(db_it, concept_positions));
         } else if(qtype == "matchingx") {
             if(weighted) {
-                render_error("matchingx cannot be weighted", pieces[1]);
-                return;
+                return render_error("matchingx cannot be weighted", pieces[1]);
             }
 
-            if(  ! argument_length_check_lt(pieces, qtype_pos + 5)
-              || ! number_check(pieces[qtype_pos + 3]))
             {
-                return;
+                checkresult check { argument_length_check_lt(pieces, qtype_pos + 5) };
+                if(! check) {
+                    return resultcontainer(check.get_rc());
+                }
+            }
+
+            {
+                checkresult check { number_check(pieces[qtype_pos + 3]) };
+                if(! check) {
+                    return resultcontainer(check.get_rc());
+                }
             }
 
             const std::size_t amount { static_cast<std::size_t>(std::stoi(pieces[qtype_pos + 3], nullptr)) };
             const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 4, std::end(pieces));
             const std::vector<std::size_t> concept_positions { concept_str_to_pos(db_it, concept_strs) };
 
-            matchingx(db_it, amount, concept_positions);
+            return resultcontainer(matchingx(db_it, amount, concept_positions));
         } else {
-            render_error("bad syntax", command);
+            return render_error("bad syntax", command);
         }
      } else if(command == "save") {
-
+        return resultcontainer();
      } else {
-        render_error("unknown command", command);
-        return;
+        return render_error("unknown command", command);
     }
 }
 
