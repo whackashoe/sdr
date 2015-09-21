@@ -10,13 +10,14 @@
 #include <utility>
 #include <cstdint>
 #include <limits>
+#include <memory>
+
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <libsocket/inetserverstream.hpp>
 #include <libsocket/exception.hpp>
-#include <libsocket/socket.hpp>
-#include <libsocket/select.hpp>
+#include <libsocket/unixclientstream.hpp>
+#include <libsocket/unixserverstream.hpp>
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -898,8 +899,10 @@ void display_usage()
     std::cout
         << "Usage: sdrdb [OPTION]..." << std::endl
         << "Options and arguments:" << std::endl
-        << "-p arg        : set port number" << std::endl
-        << "-h            : show this help" << std::endl;
+        << "-h            : show this help" << std::endl
+        << "-v            : show version" << std::endl
+        << "-b arg        : set bindpath for server" << std::endl
+        << "-s            : set server mode" << std::endl;
 
 }
 
@@ -909,81 +912,79 @@ void display_version()
 
 }
 
-void serverloop(const std::string & host, const std::string & port)
+int serverloop(const std::string & bindpath)
 {
-    try {
-        libsocket::inet_stream_server srv(host,port,LIBSOCKET_IPv6);
+    constexpr std::size_t buffer_size { 128 };
 
-        libsocket::selectset<libsocket::inet_stream_server> set1;
-        set1.add_fd(srv,LIBSOCKET_READ);
+    try {
+        libsocket::unix_stream_server server(bindpath);
 
         while(true) {
-            // Create pair (libsocket::fd_struct is the return type of selectset::wait()
-            libsocket::selectset<libsocket::inet_stream_server>::ready_socks readypair;
+            std::unique_ptr<libsocket::unix_stream_client> client(server.accept());
 
-            // Wait for a connection and save the pair to the var
-            readypair = set1.wait();
+            while(true) {
+                std::string answer;
+                answer.resize(buffer_size);
+                *client >> answer;
 
-            // Get the last fd of the LIBSOCKET_READ vector (.first) of the pair and cast the socket* to inet_stream_server*
-            libsocket::inet_stream_server * ready_srv { dynamic_cast<libsocket::inet_stream_server*>(readypair.first.back()) };
+                std::cout << answer;
 
-            // delete the fd from the pair
-            readypair.first.pop_back();
-            std::cout << "Ready for accepting\n";
+                for(char c : answer) {
+                    if(c == 0) {
+                        goto breaker;
+                    }
+                }
+            } breaker:;
 
-
-            libsocket::inet_stream * cl1 { ready_srv->accept() };
-            *cl1 << "Hello\n";
-
-            std::string answ(100, '\0');
-            *cl1 >> answ;
-            std::cout << answ;
-
-            cl1->destroy();
+            *client << "Hello back from server!\n";
         }
 
-        srv.destroy();
+        server.destroy();
     } catch (const libsocket::socket_exception& exc) {
         std::cerr << exc.mesg << std::endl;
+        return EXIT_FAILURE;
     }
+
+    return EXIT_SUCCESS;
 }
 
 int main(int argc, char ** argv)
 {
     interactive_mode = isatty(STDIN_FILENO);
 
-    std::string host { "::1" };
-    std::string port { "8888" };
     bool server { false };
+    std::string bindpath { "/tmp/sdrdb.sock" };
+    {
+        int c;
 
-    int c;
-
-    while ((c = getopt (argc, argv, "vsh:p:")) != -1) {
-        switch (c) {
-        case 'v':
-            display_version();
-            return EXIT_SUCCESS;
-            break;
-        case 'h':
-            host = optarg;
-            break;
-        case 's':
-            server = true;
-            break;
-        case 'p':
-            port = optarg;
-            break;
-        case '?':
-            display_usage();
-            return EXIT_FAILURE;
-        default:
-            abort ();
+        while ((c = getopt (argc, argv, "vhsb:")) != -1) {
+            switch (c) {
+            case 'v':
+                display_version();
+                return EXIT_SUCCESS;
+                break;
+            case 'h':
+                display_usage();
+                return EXIT_SUCCESS;
+                break;
+            case 's':
+                server = true;
+                interactive_mode = false;
+                break;
+            case 'b':
+                bindpath = optarg;
+                break;
+            case '?':
+                display_usage();
+                return EXIT_FAILURE;
+            default:
+                abort ();
+             }
          }
      }
 
     if(server) {
-        serverloop(host, port);
-        return EXIT_SUCCESS;
+        return serverloop(bindpath);
     }
 
     if(interactive_mode) {

@@ -1,39 +1,48 @@
-# include <iostream>
-# include <string>
-# include <libsocket/inetclientstream.hpp>
-# include <libsocket/exception.hpp>
+#include <iostream>
+#include <string>
+#include <libsocket/unixclientstream.hpp>
+#include <libsocket/exception.hpp>
 
-# include <unistd.h>
-# include <stdlib.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <cstring>
 
-/*
- * This program connects to host:port (usually localhost),
- * closes the socket, reopens it with the same parameters
- * (to show what you may do with sockets... ;), receives
- * a message from the server and sends a message back.
- */
+// Builds a connection to /tmp/unixsocket and sends/receives data using it.
+
+void serverloop(std::string & bindpath)
+{
+    constexpr std::size_t buffer_size { 128 };
+
+    try {
+        libsocket::unix_stream_client sock(bindpath);
+
+        std::string send = "Hello World\n";
+        sock << send;
+
+        while(true) {
+            std::string answer;
+            answer.resize(buffer_size);
+
+            sock >> answer;
+
+            std::cout << answer;
+
+            for(char c : answer) {
+                if(c == 0) {
+                    goto breaker;
+                }
+            }
+        } breaker:;
+    } catch (const libsocket::socket_exception & exc) {
+        std::cerr << exc.mesg;
+    }
+}
 
 int main(void)
 {
-    std::string host { "::1" };
-    std::string port { "8888" };
-    string answer;
+    std::string bindpath { "/tmp/sdrdb.sock" };
 
-    answer.resize(32);
+    serverloop(bindpath);
 
-    try {
-        libsocket::inet_stream sock(host,port,LIBSOCKET_IPv6);
-
-        sock >> answer;
-
-        std::cout << answer;
-
-        sock << "Hello back!\n";
-
-        sock.destroy();
-    } catch (const libsocket::socket_exception& exc) {
-        std::cerr << exc.mesg;
-    }
-
-    return 0;
+    return EXIT_SUCCESS;
 }
