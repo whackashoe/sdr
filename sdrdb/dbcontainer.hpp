@@ -10,10 +10,6 @@ struct db_container
 {
     std::string name;
     sdr::bank bank;
-    std::unordered_map<std::string, std::size_t> trait_names;
-    std::unordered_map<std::size_t, std::string> trait_names_i;
-    std::unordered_map<std::string, std::size_t> concept_names;
-    std::unordered_map<std::size_t, std::string> concept_names_i;
 
     db_container()
     : name("undefined")
@@ -29,6 +25,16 @@ struct db_container
     : name(name)
     , bank(sdr::bank(width))
     {}
+
+    std::size_t get_storage_size() const
+    {
+        return bank.get_storage_size();
+    }
+
+    std::size_t get_width() const
+    {
+        return bank.get_width();
+    }
 };
 
 #endif
