@@ -11,6 +11,8 @@ This is a library for storage and retrieval of sdr. It supports a few methods:
 
 As well as saving, loading, and utility methods.
 
+It isn't ready to be used in real products yet, it still has known bugs.
+
 ###Designed to be very fast & idiomatic C++11.
 
 Amount means total number of stored items in database
@@ -49,6 +51,26 @@ Weighted closest is simply the weighted modifier (multiplied by some value corre
 Union similarity is finding how similar a single concept is to a batch of concepts OR'd with each other
 
 Matching is finding concepts that match each of the traits/bits in a list.
+
+###Running
+
+You can use the library as standalone lib for specific application, or over unix sockets.
+
+To use as standalone, look in the benchmark directory, and run `./build.sh`
+
+For sockets and/or cli cd into sdrdb, run `./build.sh`
+
+Now start server:
+
+`./sdrdb-server -V`
+
+And start command line interface
+
+`./sdrdb-cli`
+
+Start out by typing "help"
+
+There is also a php folder which contains a library for connecting to the server if you prefer to use it on the web.
 
 
 ###Requires
