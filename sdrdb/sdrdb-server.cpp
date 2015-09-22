@@ -163,6 +163,9 @@ bool clear(db_container & db_it)
 
     db_it.bank.clear();
 
+    // add empty row for 0
+    databases[db_name].bank.insert(sdr::concept({}));
+
     if(verbose) {
         std::cout << "database " << db_name << " cleared" << std::endl;
     }
