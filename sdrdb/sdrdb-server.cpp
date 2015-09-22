@@ -249,11 +249,11 @@ std::vector<std::pair<std::size_t, std::size_t>> closest(const db_container & db
     return results;
 }
 
-std::vector<std::size_t> matching(const db_container & db_it, const std::vector<std::size_t> & concept_positions)
+std::vector<std::size_t> matching(const db_container & db_it, const std::vector<std::size_t> & trait_positions)
 {
     const auto t_start = since_epoch();
 
-    const std::vector<std::size_t> results { db_it.bank.matching(sdr::concept(concept_positions)) };
+    const std::vector<std::size_t> results { db_it.bank.matching(sdr::concept(trait_positions)) };
 
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
@@ -274,11 +274,12 @@ std::vector<std::size_t> matching(const db_container & db_it, const std::vector<
     return results;
 }
 
-std::vector<std::size_t> matchingx(const db_container & db_it, const std::size_t amount, const std::vector<std::size_t> & concept_positions)
+std::vector<std::size_t> matchingx(const db_container & db_it, const std::size_t amount, const std::vector<std::size_t> & trait_positions)
 {
     const auto t_start = since_epoch();
 
-    const std::vector<std::size_t> results { db_it.bank.matching(sdr::concept(concept_positions), amount) };
+    const std::vector<std::size_t> results { db_it.bank.matching(sdr::concept(trait_positions), amount) };
+    std::cout << "test amnt: " << results.size() << std::endl;
 
     const auto t_end = since_epoch();
     const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
@@ -499,7 +500,7 @@ result_container parse_input(const std::string & input)
                 return render_error("similarity cannot be async", "async");
             }
             {
-                check_result check { argument_length_check_eq(pieces, qtype_pos + 2) };
+                check_result check { argument_length_check_eq(pieces, qtype_pos + 3) };
                 if(! check) {
                     return result_container(check.get_rc());
                 }
@@ -529,7 +530,7 @@ result_container parse_input(const std::string & input)
                 return render_error("usimilarity cannot be async", "async");
             }
             {
-                check_result check { argument_length_check_lt(pieces, qtype_pos + 2) };
+                check_result check { argument_length_check_lt(pieces, qtype_pos + 3) };
                 if(! check) {
                     return result_container(check.get_rc());
                 }
@@ -556,7 +557,7 @@ result_container parse_input(const std::string & input)
             return result_container(usimilarity(db_it, concept_id, concept_positions));
         } else if(qtype == "closest") {
             {
-                check_result check { argument_length_check_eq(pieces, qtype_pos + 2) };
+                check_result check { argument_length_check_eq(pieces, qtype_pos + 3) };
                 if(! check) {
                     return result_container(check.get_rc());
                 }
@@ -591,29 +592,29 @@ result_container parse_input(const std::string & input)
             }
 
             {
-                check_result check { argument_length_check_lt(pieces, qtype_pos + 1) };
+                check_result check { argument_length_check_lt(pieces, qtype_pos + 2) };
                 if(! check) {
                     return result_container(check.get_rc());
                 }
             }
 
-            const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 1, std::end(pieces));
-            const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
+            const std::vector<std::string> trait_strs(std::begin(pieces) + qtype_pos + 1, std::end(pieces));
+            const std::vector<std::size_t> trait_positions { get_number_from_str(trait_strs) };
             {
-                check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
+                check_result check { positions_smaller_than_width_check(db_it, trait_positions) };
                 if(! check) {
                     return result_container(check.get_rc());
                 }
             }
 
-            return result_container(matching(db_it, concept_positions));
+            return result_container(matching(db_it, trait_positions));
         } else if(qtype == "matchingx") {
             if(async) {
                 return render_error("matchingx cannot be async", "async");
             }
 
             {
-                check_result check { argument_length_check_lt(pieces, qtype_pos + 2) };
+                check_result check { argument_length_check_lt(pieces, qtype_pos + 3) };
                 if(! check) {
                     return result_container(check.get_rc());
                 }
@@ -627,16 +628,16 @@ result_container parse_input(const std::string & input)
             }
 
             const std::size_t amount { static_cast<std::size_t>(std::stoi(pieces[qtype_pos + 1], nullptr)) };
-            const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 2, std::end(pieces));
-            const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
+            const std::vector<std::string> trait_strs(std::begin(pieces) + qtype_pos + 2, std::end(pieces));
+            const std::vector<std::size_t> trait_positions { get_number_from_str(trait_strs) };
             {
-                check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
+                check_result check { positions_smaller_than_width_check(db_it, trait_positions) };
                 if(! check) {
                     return result_container(check.get_rc());
                 }
             }
 
-            return result_container(matchingx(db_it, amount, concept_positions));
+            return result_container(matchingx(db_it, amount, trait_positions));
         } else {
             return render_error("bad syntax", command);
         }
