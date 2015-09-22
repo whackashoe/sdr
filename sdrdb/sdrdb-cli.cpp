@@ -363,7 +363,7 @@ void exit_console()
 void display_usage()
 {
     std::cout
-        << "Usage: sdrdb [OPTION]..." << std::endl
+        << "Usage: sdrdb-cli [OPTION]..." << std::endl
         << "Options and arguments:" << std::endl
         << "-h            : show this help" << std::endl
         << "-v            : show version" << std::endl
@@ -456,8 +456,8 @@ int main(int argc, char ** argv)
     }
 
     std::cout
-        << "Welcome to the sdrdb interactive console. Commands end with \\n" << std::endl
-        << "Server version: " << SDRDB_VERSION << std::endl
+        << "Welcome to the sdrdb interactive console." << std::endl
+        << "Version: " << SDRDB_VERSION << std::endl
         << std::endl
         << "Type 'help' for help." << std::endl
         << std::endl;
