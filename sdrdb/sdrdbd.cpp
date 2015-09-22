@@ -138,9 +138,7 @@ check_result positions_smaller_than_width_check(const db_container & db_it, cons
 {
     for(std::size_t pos : positions) {
         if(pos >= db_it.bank.get_width()) {
-            std::stringstream ss;
-            ss << pos;
-            return check_result(render_error("position too large for db", ss.str()));
+            return check_result(render_error("position too large for db", std::to_string(pos)));
         }
     }
 
