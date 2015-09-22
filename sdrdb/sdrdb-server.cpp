@@ -160,15 +160,10 @@ bool resize(db_container & db_it, const std::size_t width)
 
 std::size_t insert(db_container & db_it, const std::vector<std::size_t> & concept_positions)
 {
-    const auto t_start = since_epoch();
-
     const sdr::position_t position { db_it.bank.insert(sdr::concept(concept_positions)) };
 
-    const auto t_end = since_epoch();
-    const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
-
     if(verbose) {
-        std::cout << "OK, concept " << position << " created (" << t_ms << "μs)" << std::endl;
+        std::cout << position << std::endl;
     }
 
     return position;
@@ -176,15 +171,10 @@ std::size_t insert(db_container & db_it, const std::vector<std::size_t> & concep
 
 bool update(db_container & db_it, const std::size_t concept_id, const std::vector<std::size_t> & concept_positions)
 {
-    const auto t_start = since_epoch();
-
     db_it.bank.update(concept_id, sdr::concept(concept_positions));
 
-    const auto t_end = since_epoch();
-    const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
-
     if(verbose) {
-        std::cout << "OK, concept " << concept_id << " affected (" << t_ms << "μs)" << std::endl;
+        std::cout << "OK" << std::endl;
     }
 
     return true;
@@ -192,16 +182,10 @@ bool update(db_container & db_it, const std::size_t concept_id, const std::vecto
 
 std::size_t similarity(const db_container & db_it, const std::size_t concept_a_id, const std::size_t concept_b_id)
 {
-    const auto t_start = since_epoch();
-
     const std::size_t result { db_it.bank.similarity(concept_a_id, concept_b_id) };
-
-    const auto t_end = since_epoch();
-    const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
     if(verbose) {
         std::cout << result << std::endl;
-        std::cout << "OK, 2 concepts compared (" << t_ms << "μs)" << std::endl;
     }
 
     return result;
@@ -209,16 +193,10 @@ std::size_t similarity(const db_container & db_it, const std::size_t concept_a_i
 
 std::size_t usimilarity(const db_container & db_it, const std::size_t concept_id, const std::vector<std::size_t> & concept_positions)
 {
-    const auto t_start = since_epoch();
-
     const std::size_t result { db_it.bank.union_similarity(concept_id, concept_positions) };
-
-    const auto t_end = since_epoch();
-    const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
     if(verbose) {
         std::cout << result << std::endl;
-        std::cout << "OK, " << (1 + concept_positions.size()) << " concepts compared (" << t_ms << "μs)" << std::endl;
     }
 
     return result;
@@ -226,12 +204,7 @@ std::size_t usimilarity(const db_container & db_it, const std::size_t concept_id
 
 std::vector<std::pair<std::size_t, std::size_t>> closest(const db_container & db_it, const std::size_t amount, const std::size_t concept_id)
 {
-    const auto t_start = since_epoch();
-
     const std::vector<std::pair<std::size_t, std::size_t>> results { db_it.bank.closest(concept_id, amount) };
-
-    const auto t_end = since_epoch();
-    const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
     if(verbose) {
         for(std::size_t i=0; i<results.size(); ++i) {
@@ -243,7 +216,7 @@ std::vector<std::pair<std::size_t, std::size_t>> closest(const db_container & db
             }
         }
 
-        std::cout << "OK, " << amount << " concepts sorted (" << t_ms << "μs)" << std::endl;
+        std::cout << std::endl;
     }
 
     return results;
@@ -251,12 +224,7 @@ std::vector<std::pair<std::size_t, std::size_t>> closest(const db_container & db
 
 std::vector<std::size_t> matching(const db_container & db_it, const std::vector<std::size_t> & trait_positions)
 {
-    const auto t_start = since_epoch();
-
     const std::vector<std::size_t> results { db_it.bank.matching(sdr::concept(trait_positions)) };
-
-    const auto t_end = since_epoch();
-    const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
     if(verbose) {
         for(std::size_t i=0; i<results.size(); ++i) {
@@ -268,7 +236,7 @@ std::vector<std::size_t> matching(const db_container & db_it, const std::vector<
             }
         }
 
-        std::cout << "OK, " << (results.size()) << " concepts matched (" << t_ms << "μs)" << std::endl;
+        std::cout << std::endl;
     }
 
     return results;
@@ -276,13 +244,7 @@ std::vector<std::size_t> matching(const db_container & db_it, const std::vector<
 
 std::vector<std::size_t> matchingx(const db_container & db_it, const std::size_t amount, const std::vector<std::size_t> & trait_positions)
 {
-    const auto t_start = since_epoch();
-
     const std::vector<std::size_t> results { db_it.bank.matching(sdr::concept(trait_positions), amount) };
-    std::cout << "test amnt: " << results.size() << std::endl;
-
-    const auto t_end = since_epoch();
-    const auto t_ms = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
 
     if(verbose) {
         for(std::size_t i=0; i<results.size(); ++i) {
@@ -294,7 +256,7 @@ std::vector<std::size_t> matchingx(const db_container & db_it, const std::size_t
             }
         }
 
-        std::cout << "OK, " << (results.size()) << " concepts matched (" << t_ms << "μs)" << std::endl;
+        std::cout << std::endl;
     }
 
     return results;
