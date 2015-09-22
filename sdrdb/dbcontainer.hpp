@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include "../includes/sdr.hpp"
 
-struct dbcontainer
+struct db_container
 {
     std::string name;
     sdr::bank bank;
@@ -15,17 +15,17 @@ struct dbcontainer
     std::unordered_map<std::string, std::size_t> concept_names;
     std::unordered_map<std::size_t, std::string> concept_names_i;
 
-    dbcontainer()
+    db_container()
     : name("undefined")
     , bank(0)
     {}
 
-    dbcontainer(const dbcontainer & dbc)
+    db_container(const db_container & dbc)
     : name(dbc.name)
     , bank(dbc.bank)
     {}
 
-    dbcontainer(const std::string & name, const std::size_t width)
+    db_container(const std::string & name, const std::size_t width)
     : name(name)
     , bank(sdr::bank(width))
     {}

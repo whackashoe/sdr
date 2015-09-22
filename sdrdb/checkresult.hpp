@@ -3,17 +3,17 @@
 
 #include "resultcontainer.hpp"
 
-struct checkresult
+struct check_result
 {
     bool success;
-    resultcontainer rc;
+    result_container rc;
 
-    checkresult(const bool success)
+    check_result(const bool success)
     : success(success)
-    , rc(resultcontainer())
+    , rc(result_container())
     {}
 
-    checkresult(const resultcontainer & rc)
+    check_result(const result_container & rc)
     : success(false)
     , rc(rc)
     {}
@@ -33,7 +33,7 @@ struct checkresult
         return !success;
     }
 
-    resultcontainer & get_rc()
+    result_container & get_rc()
     {
         return rc;
     }

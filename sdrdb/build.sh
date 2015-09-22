@@ -1,4 +1,4 @@
 #!/bin/sh
 
-g++ -std=c++11 client.cpp -o client -lsocket++
-g++ -std=c++11 sdrdb.cpp -Wall -Wextra -o sdrdb -lreadline -lsocket++
+g++ -std=c++11 sdrdb-cli.cpp -Wall -Wextra -pedantic -o sdrdb-cli -lreadline -lsocket++
+g++ -std=c++11 sdrdbd.cpp -Wall -Wextra -pedantic -o sdrdbd -lreadline -lsocket++
