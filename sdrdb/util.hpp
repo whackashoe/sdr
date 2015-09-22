@@ -48,4 +48,26 @@ std::string tolower(const std::string & s)
     return ret;
 }
 
+
+std::size_t get_number_from_str(const std::string & str)
+{
+    if(is_number(str)) {
+        return static_cast<std::size_t>(std::stoi(str, nullptr));
+    } else  {
+        return false;
+    }
+}
+
+std::vector<std::size_t> get_number_from_str(const std::vector<std::string> & strs)
+{
+    std::vector<std::size_t> nums;
+
+    for(const auto & i : strs) {
+        const std::size_t n { get_number_from_str(i) };
+        nums.push_back(n);
+    }
+
+    return nums;
+}
+
 #endif

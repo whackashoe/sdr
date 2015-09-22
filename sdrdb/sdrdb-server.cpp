@@ -48,36 +48,6 @@ result_container render_error(const std::string & s, const std::string & piece)
     return result_container(rstr);
 }
 
-std::size_t get_trait_id(const std::string & str)
-{
-    if(is_number(str)) {
-        return static_cast<std::size_t>(std::stoi(str, nullptr));
-    } else  {
-        return false;
-    }
-}
-
-std::size_t get_concept_id(const std::string & str)
-{
-    if(is_number(str)) {
-        return static_cast<std::size_t>(std::stoi(str, nullptr));
-    } else {
-        return false;
-    }
-}
-
-std::vector<std::size_t> concept_str_to_pos(const std::vector<std::string> & concept_strs)
-{
-    std::vector<std::size_t> concept_positions;
-
-    for(const auto & i : concept_strs) {
-        const std::size_t concept_id { get_concept_id(i) };
-        concept_positions.push_back(concept_id);
-    }
-
-    return concept_positions;
-}
-
 check_result syntax_eq_check(const std::string & a, const std::string & b)
 {
     if(a != tolower(b)) {
@@ -456,7 +426,7 @@ result_container parse_input(const std::string & input)
         db_container & db_it { db->second };
 
         const std::vector<std::string> concept_strs(std::begin(pieces) +  2, std::end(pieces));;
-        const std::vector<std::size_t> concept_positions { concept_str_to_pos(concept_strs) };
+        const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
         {
             check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
             if(! check) {
@@ -483,7 +453,7 @@ result_container parse_input(const std::string & input)
         db_container & db_it { db->second };
 
         const std::string & concept_str  { pieces[2] };
-        const std::size_t   concept_id   { get_concept_id(concept_str) };
+        const std::size_t   concept_id   { get_number_from_str(concept_str) };
         if(! concept_id) {
             return render_error("concept not found", concept_str);
         }
@@ -492,7 +462,7 @@ result_container parse_input(const std::string & input)
         }
 
         const std::vector<std::string> concept_strs(std::begin(pieces) + 3, std::end(pieces));
-        const std::vector<std::size_t> concept_positions { concept_str_to_pos(concept_strs) };
+        const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
         {
             check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
             if(! check) {
@@ -534,7 +504,7 @@ result_container parse_input(const std::string & input)
             }
 
             const std::string & concept_a_str { pieces[qtype_pos + 1] };
-            const std::size_t   concept_a_id  { get_concept_id(concept_a_str) };
+            const std::size_t   concept_a_id  { get_number_from_str(concept_a_str) };
             if(! concept_a_id) {
                 return render_error("concept not found", concept_a_str);
             }
@@ -543,7 +513,7 @@ result_container parse_input(const std::string & input)
             }
 
             const std::string & concept_b_str { pieces[qtype_pos + 2] };
-            const std::size_t   concept_b_id  { get_concept_id(concept_b_str) };
+            const std::size_t   concept_b_id  { get_number_from_str(concept_b_str) };
             if(! concept_b_id) {
                 return render_error("concept not found", concept_b_str);
             }
@@ -564,7 +534,7 @@ result_container parse_input(const std::string & input)
             }
 
             const std::string & concept_str { pieces[qtype_pos + 1] };
-            const std::size_t   concept_id  { get_concept_id(concept_str) };
+            const std::size_t   concept_id  { get_number_from_str(concept_str) };
             if(! concept_id) {
                 return render_error("concept not found", concept_str);
             }
@@ -573,7 +543,7 @@ result_container parse_input(const std::string & input)
             }
 
             const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 2, std::end(pieces));
-            const std::vector<std::size_t> concept_positions { concept_str_to_pos(concept_strs) };
+            const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
             {
                 check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
                 if(! check) {
@@ -600,7 +570,7 @@ result_container parse_input(const std::string & input)
 
             const std::size_t   amount      { static_cast<std::size_t>(std::stoi(amount_str)) };
             const std::string & concept_str { pieces[qtype_pos + 2] };
-            const std::size_t   concept_id  { get_concept_id(concept_str) };
+            const std::size_t   concept_id  { get_number_from_str(concept_str) };
             if(! concept_id) {
                 return render_error("concept not found", concept_str);
             }
@@ -626,7 +596,7 @@ result_container parse_input(const std::string & input)
             }
 
             const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 1, std::end(pieces));
-            const std::vector<std::size_t> concept_positions { concept_str_to_pos(concept_strs) };
+            const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
             {
                 check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
                 if(! check) {
@@ -656,7 +626,7 @@ result_container parse_input(const std::string & input)
 
             const std::size_t amount { static_cast<std::size_t>(std::stoi(pieces[qtype_pos + 1], nullptr)) };
             const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 2, std::end(pieces));
-            const std::vector<std::size_t> concept_positions { concept_str_to_pos(concept_strs) };
+            const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
             {
                 check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
                 if(! check) {
