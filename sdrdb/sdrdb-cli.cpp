@@ -446,7 +446,7 @@ int main(int argc, char ** argv)
                 bindpath = optarg;
                 break;
             case '?':
-                std::cerr << "sdrdb: invalid option" << std::endl;
+                std::cerr << "sdrdb-cli: invalid option" << std::endl;
                 display_usage();
                 return EXIT_FAILURE;
             default:

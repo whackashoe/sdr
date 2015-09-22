@@ -33,7 +33,7 @@
 #include "util.hpp"
 
 
-bool verbose { true };
+bool verbose { false };
 std::unordered_map<std::string, db_container> databases;
 
 result_container render_error(const std::string & s, const std::string & piece)
@@ -43,7 +43,9 @@ result_container render_error(const std::string & s, const std::string & piece)
 
     const std::string rstr { ss.str() };
 
-    std::cerr << rstr;
+    if(verbose) {
+        std::cerr << rstr;
+    }
 
     return result_container(rstr);
 }
@@ -645,30 +647,12 @@ result_container parse_input(const std::string & input)
     }
 }
 
-void display_usage()
-{
-    std::cout
-        << "Usage: sdrdb [OPTION]..." << std::endl
-        << "Options and arguments:" << std::endl
-        << "-h            : show this help" << std::endl
-        << "-v            : show version" << std::endl
-        << "-b arg        : set bindpath for server" << std::endl
-        << "-s            : set server mode" << std::endl;
-
-}
-
-void display_version()
-{
-    std::cout << "sdrdb " << SDRDB_VERSION << std::endl;
-}
-
 int serverloop(const std::string & bindpath)
 {
     constexpr std::size_t buffer_size { 128 };
 
     try {
         libsocket::unix_stream_server server(bindpath);
-        std::cout << "server started" << std::endl;
 
         while(true) {
             std::unique_ptr<libsocket::unix_stream_client> client(server.accept());
@@ -680,7 +664,9 @@ int serverloop(const std::string & bindpath)
                 *client >> answer;
 
 
-                std::cout << answer;
+                if(verbose) {
+                    std::cout << answer;
+                }
                 input.append(answer);
 
                 for(char c : answer) {
@@ -693,9 +679,6 @@ int serverloop(const std::string & bindpath)
             result_container res { parse_input(input) };
             switch(res.get_type()) {
                 case result_type::NONE:
-                    {
-                        std::cout << "none" << std::endl;
-                    }
                     break;
                 case result_type::BOOL:
                     {
@@ -758,9 +741,6 @@ int serverloop(const std::string & bindpath)
                     }
                     break;
                 default:
-                    {
-                        std::cout << "default" << std::endl;
-                    }
                     break;
             }
         }
@@ -774,17 +754,38 @@ int serverloop(const std::string & bindpath)
     return EXIT_SUCCESS;
 }
 
+void display_usage()
+{
+    std::cout
+        << "Usage: sdrdb-server [OPTION]..." << std::endl
+        << "Options and arguments:" << std::endl
+        << "-h            : show this help" << std::endl
+        << "-v            : show version" << std::endl
+        << "-V            : set verbose" << std::endl
+        << "-b arg        : set bindpath for server" << std::endl
+        << "-d            : run as daemon" << std::endl;
+}
+
+void display_version()
+{
+    std::cout << "sdrdb-server " << SDRDB_VERSION << std::endl;
+}
+
 int main(int argc, char ** argv)
 {
     std::string bindpath { "/tmp/sdrdb.sock" };
+    bool daemonize { false };
     {
         int c;
 
-        while ((c = getopt (argc, argv, "vhb:")) != -1) {
+        while ((c = getopt (argc, argv, "vVhb:d")) != -1) {
             switch (c) {
             case 'v':
                 display_version();
                 return EXIT_SUCCESS;
+                break;
+            case 'V':
+                verbose = true;
                 break;
             case 'h':
                 display_usage();
@@ -793,13 +794,25 @@ int main(int argc, char ** argv)
             case 'b':
                 bindpath = optarg;
                 break;
+            case 'd':
+                daemonize = true;
+                break;
             case '?':
-                std::cerr << "sdrdb: invalid option" << std::endl;
+                std::cerr << "sdrdb-server: invalid option" << std::endl;
                 display_usage();
                 return EXIT_FAILURE;
             default:
                 abort ();
             }
+        }
+    }
+
+    std::cout << "sdrdb-server started" << std::endl;
+
+    if(daemonize) {
+        if(daemon(0, 0) != 0) {
+            std::cerr << "error during daemonization: " << errno << std::endl;
+            return EXIT_FAILURE;
         }
     }
 
