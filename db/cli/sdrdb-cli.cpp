@@ -7,12 +7,11 @@
 
 #include <libsocket/unixclientstream.hpp>
 #include <libsocket/exception.hpp>
-#include <readline/readline.h>
-#include <readline/history.h>
 
 #include <unistd.h>
 #include <stdlib.h>
 
+#include "linenoise.h"
 #include "help_block.hpp"
 
 
@@ -334,7 +333,11 @@ void send_command(const std::string & cmd)
 
 bool inputloop()
 {
-    const char * input = readline("sdrdb> ");
+    const char * input = linenoise("sdrdb> ");
+    if(input == nullptr) {
+        exit_console();
+        return false;
+    }
 
     std::string sinput(input);
     sinput = trim(sinput);
@@ -350,15 +353,24 @@ bool inputloop()
             send_command(sinput);
         }
 
-        add_history(input);
+        linenoiseHistoryAdd(input);
     }
 
 
     return true;
 }
 
+void completion(const char *buf, linenoiseCompletions *lc) {
+    if (buf[0] == 'h') {
+        linenoiseAddCompletion(lc,"hello");
+        linenoiseAddCompletion(lc,"hello there");
+    }
+}
+
 int main(int argc, char ** argv)
 {
+    linenoiseSetCompletionCallback(completion);
+
     {
         int c;
 

@@ -56,17 +56,16 @@ Matching is finding concepts that match each of the traits/bits in a list.
 
 You can use the library as standalone lib for specific application, or over unix sockets.
 
-To use as standalone, look in the benchmark directory, and run `./build.sh`
+To compile, just run `make`
 
-For sockets and/or cli cd into sdrdb, run `./build.sh`
 
 Now start server:
 
-`./sdrdb-server -V`
+`./dist/sdrdb-server -V`
 
 And start command line interface
 
-`./sdrdb-cli`
+`./dist/sdrdb-cli`
 
 Start out by typing "help"
 
@@ -77,7 +76,6 @@ There is also a php folder which contains a library for connecting to the server
 
 
  * google sparsehash: https://code.google.com/p/sparsehash/
- * gnu readline: http://savannah.gnu.org/git/?group=readline
  * libsocket++: https://github.com/dermesser/libsocket
  * c++11 compiler (gcc or clang will do)
 
