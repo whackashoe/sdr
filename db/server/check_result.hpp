@@ -1,7 +1,7 @@
 #ifndef CHECKRESULT_H
 #define CHECKRESULT_H
 
-#include "resultcontainer.hpp"
+#include "result_container.hpp"
 
 struct check_result
 {

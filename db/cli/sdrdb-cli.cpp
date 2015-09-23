@@ -13,93 +13,23 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "util.hpp"
+#include "help_block.hpp"
 
 
 #ifndef SDRDB_VERSION
 #define SDRDB_VERSION "0.1-alpha"
 #endif
 
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
 
 std::string bindpath { "/tmp/sdrdb.sock" };
 
-
-struct help_block_arg
+std::string trim(const std::string & s)
 {
-    std::string arg;
-    std::string type;
-    bool required;
-    std::string desc;
-
-    help_block_arg(
-        const std::string & arg
-      , const std::string & type
-      , const bool required
-      , const std::string & desc
-    )
-    : arg(arg)
-    , type(type)
-    , required(required)
-    , desc(desc)
-    {}
-
-    void render() const
-    {
-        std::cout
-            << ANSI_COLOR_YELLOW << arg << ANSI_COLOR_RESET
-            << " (" << type << ") ";
-        if(required) {
-            std::cout << ANSI_COLOR_RED << "(required)" << ANSI_COLOR_RESET;
-        }
-        std::cout
-            << " : "
-            << desc
-            << std::endl;
-    }
-};
-
-struct help_block
-{
-    std::string cmd;
-    std::string summary;
-    std::vector<help_block_arg> args;
-    std::vector<std::string> examples;
-
-    help_block(
-        const std::string & cmd
-      , const std::string & summary
-      , const std::vector<help_block_arg> & args
-      , const std::vector<std::string> & examples
-    )
-    : cmd(cmd)
-    , summary(summary)
-    , args(args)
-    , examples(examples)
-    {}
-
-    void render() const
-    {
-        std::cout << ANSI_COLOR_CYAN << cmd << ANSI_COLOR_RESET << " - " << summary << std::endl;
-        for(auto & arg : args) {
-            std::cout << "\t";
-            arg.render();
-        }
-
-        std::cout << "EXAMPLES:" << std::endl << std::endl;
-
-        for(auto & example : examples) {
-            std::cout << example << std::endl << std::endl;
-        }
-    }
-};
-
+    std::string ret { s };
+    ret.erase(ret.begin(), std::find_if(ret.begin(), ret.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+    ret.erase(std::find_if(ret.rbegin(), ret.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), ret.end());
+    return ret;
+}
 
 void render_help_commands_index()
 {
@@ -404,7 +334,7 @@ void send_command(const std::string & cmd)
 
 bool inputloop()
 {
-    const char * input = readline("sdrdb" ANSI_COLOR_CYAN "> " ANSI_COLOR_RESET);
+    const char * input = readline("sdrdb> ");
 
     std::string sinput(input);
     sinput = trim(sinput);

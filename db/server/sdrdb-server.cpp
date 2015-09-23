@@ -21,20 +21,69 @@
 #include <libsocket/unixclientstream.hpp>
 #include <libsocket/unixserverstream.hpp>
 
-#include "../includes/sdr.hpp"
-#include "dbcontainer.hpp"
-#include "resultcontainer.hpp"
-#include "checkresult.hpp"
+#include "../../includes/sdr.hpp"
+#include "db_container.hpp"
+#include "result_container.hpp"
+#include "check_result.hpp"
 
 #ifndef SDRDB_VERSION
 #define SDRDB_VERSION "0.1-alpha"
 #endif
 
-#include "util.hpp"
-
 
 bool verbose { false };
 std::unordered_map<std::string, db_container> databases;
+
+std::string tolower(const std::string & s)
+{
+    std::string ret { s };
+
+    std::transform(ret.begin(), ret.end(), ret.begin(), [](const int c) {
+        if(c >= 'A' && c <= 'Z') {
+            return c - 'A' + 'a';
+        }
+
+        return c;
+    });
+
+    return ret;
+}
+
+bool is_number(const std::string & s)
+{
+    std::string::const_iterator it = s.begin();
+    while (it != s.end() && std::isdigit(*it)) ++it;
+    return !s.empty() && it == s.end();
+}
+
+std::string trim(const std::string & s)
+{
+    std::string ret { s };
+    ret.erase(ret.begin(), std::find_if(ret.begin(), ret.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+    ret.erase(std::find_if(ret.rbegin(), ret.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), ret.end());
+    return ret;
+}
+
+std::size_t get_number_from_str(const std::string & str)
+{
+    if(is_number(str)) {
+        return static_cast<std::size_t>(std::stoi(str, nullptr));
+    } else  {
+        return false;
+    }
+}
+
+std::vector<std::size_t> get_number_from_str(const std::vector<std::string> & strs)
+{
+    std::vector<std::size_t> nums;
+
+    for(const auto & i : strs) {
+        const std::size_t n { get_number_from_str(i) };
+        nums.push_back(n);
+    }
+
+    return nums;
+}
 
 result_container render_error(const std::string & s, const std::string & piece)
 {
