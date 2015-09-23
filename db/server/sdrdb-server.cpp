@@ -52,8 +52,11 @@ std::string tolower(const std::string & s)
 bool is_number(const std::string & s)
 {
     std::string::const_iterator it = s.begin();
-    while (it != s.end() && std::isdigit(*it)) ++it;
-    return !s.empty() && it == s.end();
+
+    while (it != s.end() && std::isdigit(*it)) {
+        ++it;
+    }
+    return ! s.empty() && it == s.end();
 }
 
 std::string trim(const std::string & s)
@@ -324,7 +327,7 @@ result_container parse_input(const std::string & input)
             const std::string & trimmed { trim(piece) };
 
             if(! trimmed.empty()) {
-                pieces.push_back(piece);
+                pieces.push_back(trimmed);
             }
         }
     }
