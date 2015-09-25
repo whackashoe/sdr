@@ -13,6 +13,7 @@
 #include <memory>
 #include <type_traits>
 #include <cstddef>
+#include <stdexcept>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -25,6 +26,7 @@
 #include "db_container.hpp"
 #include "result_container.hpp"
 #include "check_result.hpp"
+#include "number_container.hpp"
 
 #ifndef SDRDB_VERSION
 #define SDRDB_VERSION "0.1-alpha"
@@ -67,25 +69,16 @@ std::string trim(const std::string & s)
     return ret;
 }
 
-std::size_t get_number_from_str(const std::string & str)
+std::vector<std::size_t> unpack(const std::vector<number_container> & v)
 {
-    if(is_number(str)) {
-        return static_cast<std::size_t>(std::stoi(str, nullptr));
-    } else  {
-        return false;
-    }
-}
+    std::vector<std::size_t> ret;
+    ret.reserve(v.size());
 
-std::vector<std::size_t> get_number_from_str(const std::vector<std::string> & strs)
-{
-    std::vector<std::size_t> nums;
-
-    for(const auto & i : strs) {
-        const std::size_t n { get_number_from_str(i) };
-        nums.push_back(n);
+    for(auto & i : v) {
+        ret.push_back(i.get_n());
     }
 
-    return nums;
+    return ret;
 }
 
 result_container render_error(const std::string & s, const std::string & piece)
@@ -144,11 +137,11 @@ check_result argument_length_check_eq(const std::vector<std::string> & pieces, c
     }
 }
 
-check_result positions_smaller_than_width_check(const db_container & db_it, const std::vector<std::size_t> & positions)
+check_result positions_smaller_than_width_check(const db_container & db_it, const std::vector<number_container> & positions)
 {
-    for(const std::size_t pos : positions) {
-        if(pos >= db_it.get_width()) {
-            return check_result(render_error("position too large for db", std::to_string(pos)));
+    for(const number_container pos : positions) {
+        if(pos.get_n() >= db_it.get_width()) {
+            return check_result(render_error("position too large for db", pos.get_s()));
         }
     }
 
@@ -210,9 +203,9 @@ bool resize(db_container & db_it, const std::size_t width)
     return true;
 }
 
-std::size_t insert(db_container & db_it, const std::vector<std::size_t> & concept_positions)
+std::size_t insert(db_container & db_it, const std::vector<std::size_t> & trait_positions)
 {
-    const sdr::position_t position { db_it.bank.insert(sdr::concept(concept_positions)) };
+    const sdr::position_t position { db_it.bank.insert(sdr::concept(trait_positions)) };
 
     if(verbose) {
         std::cout << position << std::endl;
@@ -221,9 +214,9 @@ std::size_t insert(db_container & db_it, const std::vector<std::size_t> & concep
     return position;
 }
 
-bool update(db_container & db_it, const std::size_t concept_id, const std::vector<std::size_t> & concept_positions)
+bool update(db_container & db_it, const std::size_t concept_id, const std::vector<std::size_t> & trait_positions)
 {
-    db_it.bank.update(concept_id, sdr::concept(concept_positions));
+    db_it.bank.update(concept_id, sdr::concept(trait_positions));
 
     if(verbose) {
         std::cout << "OK" << std::endl;
@@ -368,9 +361,12 @@ result_container parse_input(const std::string & input)
             }
         }
 
-        const std::size_t width { static_cast<std::size_t>(std::stoi(db_width, nullptr)) };
+        number_container width(db_width);
+        if(! width.parse()) {
+            return width.err();
+        }
 
-        return result_container(create_database(db_name, width));
+        return result_container(create_database(db_name, width.get_n()));
     } else if(command == "drop") {
         {
             check_result check { argument_length_check_eq(pieces, 2) };
@@ -424,9 +420,12 @@ result_container parse_input(const std::string & input)
             }
         }
 
-        const std::size_t width { static_cast<std::size_t>(std::stoi(db_width, nullptr)) };
+        number_container width(db_width);
+        if(! width.parse()) {
+            return width.err();
+        }
 
-        return result_container(resize(db->second, width));
+        return result_container(resize(db->second, width.get_n()));
      } else if(command == "put") {
         {
             check_result check { argument_length_check_lt(pieces, 3) };
@@ -442,16 +441,28 @@ result_container parse_input(const std::string & input)
         }
         db_container & db_it { db->second };
 
-        const std::vector<std::string> concept_strs(std::begin(pieces) +  2, std::end(pieces));;
-        const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
+        const std::vector<std::string> trait_strs(std::begin(pieces) +  2, std::end(pieces));
+        std::vector<number_container> trait_positions(std::begin(trait_strs), std::end(trait_strs));
+        for(number_container & n :  trait_positions) {
+            std::cout << "pre parse" << std::endl;
+            if(! n.parse()) {
+                return n.err();
+            }
+        }
+
+        std::cout << "past parse" << std::endl;
+
         {
-            check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
+            check_result check { positions_smaller_than_width_check(db_it, trait_positions) };
             if(! check) {
                 return result_container(check.get_rc());
             }
         }
 
-        return result_container(insert(db_it, concept_positions));
+        std::cout << "post pos small" << std::endl;
+
+
+        return result_container(insert(db_it, unpack(trait_positions)));
      }  else if(command == "update") {
         //update DBNAME CONCEPT_ID TRAITS....
         {
@@ -470,24 +481,34 @@ result_container parse_input(const std::string & input)
         db_container & db_it { db->second };
 
         const std::string & concept_str  { pieces[2] };
-        const std::size_t   concept_id   { get_number_from_str(concept_str) };
-        if(! concept_id) {
+        number_container concept_id(concept_str);
+        if(! concept_id.parse()) {
+            return concept_id.err();
+        }
+
+        if(! concept_id.get_n()) {
             return render_error("concept not found", concept_str);
         }
-        if(concept_id >= db_it.get_storage_size()) {
+        if(concept_id.get_n() >= db_it.get_storage_size()) {
             return render_error("id larger than amount in storage", concept_str);
         }
 
-        const std::vector<std::string> concept_strs(std::begin(pieces) + 3, std::end(pieces));
-        const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
+        const std::vector<std::string> trait_strs(std::begin(pieces) + 3, std::end(pieces));
+        std::vector<number_container> trait_positions(std::begin(trait_strs), std::end(trait_strs));
+        for(number_container & n :  trait_positions) {
+            if(! n.parse()) {
+                return n.err();
+            }
+        }
+
         {
-            check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
+            check_result check { positions_smaller_than_width_check(db_it, trait_positions) };
             if(! check) {
                 return result_container(check.get_rc());
             }
         }
 
-        return result_container(update(db_it, concept_id, concept_positions));
+        return result_container(update(db_it, concept_id.get_n(), unpack(trait_positions)));
      } else if(command == "query") {
         {
             check_result check { argument_length_check_lt(pieces, 4) };
@@ -521,24 +542,32 @@ result_container parse_input(const std::string & input)
             }
 
             const std::string & concept_a_str { pieces[qtype_pos + 1] };
-            const std::size_t   concept_a_id  { get_number_from_str(concept_a_str) };
-            if(! concept_a_id) {
+            number_container concept_a_id(concept_a_str);
+            if(! concept_a_id.parse()) {
+                return concept_a_id.err();
+            }
+
+            if(! concept_a_id.get_n()) {
                 return render_error("concept not found", concept_a_str);
             }
-            if(concept_a_id >= db_it.get_storage_size()) {
+            if(concept_a_id.get_n() >= db_it.get_storage_size()) {
                 return render_error("id larger than amount in storage", concept_a_str);
             }
 
             const std::string & concept_b_str { pieces[qtype_pos + 2] };
-            const std::size_t   concept_b_id  { get_number_from_str(concept_b_str) };
-            if(! concept_b_id) {
+            number_container concept_b_id(concept_b_str);
+            if(! concept_b_id.parse()) {
+                return concept_b_id.err();
+            }
+
+            if(! concept_b_id.get_n()) {
                 return render_error("concept not found", concept_b_str);
             }
-            if(concept_b_id >= db_it.get_storage_size()) {
+            if(concept_b_id.get_n() >= db_it.get_storage_size()) {
                 return render_error("id larger than amount in storage", concept_b_str);
             }
 
-            return result_container(similarity(db_it, concept_a_id, concept_b_id));
+            return result_container(similarity(db_it, concept_a_id.get_n(), concept_b_id.get_n()));
         } else if(qtype == "usimilarity") {
             if(async) {
                 return render_error("usimilarity cannot be async", "async");
@@ -551,24 +580,27 @@ result_container parse_input(const std::string & input)
             }
 
             const std::string & concept_str { pieces[qtype_pos + 1] };
-            const std::size_t   concept_id  { get_number_from_str(concept_str) };
-            if(! concept_id) {
+            number_container concept_id(concept_str);
+            if(! concept_id.parse()) {
+                return concept_id.err();
+            }
+
+            if(! concept_id.get_n()) {
                 return render_error("concept not found", concept_str);
             }
-            if(concept_id >= db_it.get_storage_size()) {
+            if(concept_id.get_n() >= db_it.get_storage_size()) {
                 return render_error("id larger than amount in storage", concept_str);
             }
 
             const std::vector<std::string> concept_strs(std::begin(pieces) + qtype_pos + 2, std::end(pieces));
-            const std::vector<std::size_t> concept_positions { get_number_from_str(concept_strs) };
-            {
-                check_result check { positions_smaller_than_width_check(db_it, concept_positions) };
-                if(! check) {
-                    return result_container(check.get_rc());
+            std::vector<number_container> concept_positions(std::begin(concept_strs), std::end(concept_strs));
+            for(number_container & n :  concept_positions) {
+                if(! n.parse()) {
+                    return n.err();
                 }
             }
 
-            return result_container(usimilarity(db_it, concept_id, concept_positions));
+            return result_container(usimilarity(db_it, concept_id.get_n(), unpack(concept_positions)));
         } else if(qtype == "closest") {
             {
                 check_result check { argument_length_check_eq(pieces, qtype_pos + 3) };
@@ -585,17 +617,25 @@ result_container parse_input(const std::string & input)
                 }
             }
 
-            const std::size_t   amount      { static_cast<std::size_t>(std::stoi(amount_str)) };
+            number_container amount(amount_str);
+            if(! amount.parse()) {
+                return amount.err();
+            }
+
             const std::string & concept_str { pieces[qtype_pos + 2] };
-            const std::size_t   concept_id  { get_number_from_str(concept_str) };
-            if(! concept_id) {
+            number_container concept_id(concept_str);
+            if(! concept_id.parse()) {
+                return concept_id.err();
+            }
+
+            if(! concept_id.get_n()) {
                 return render_error("concept not found", concept_str);
             }
-            if(concept_id >= db_it.get_storage_size()) {
+            if(concept_id.get_n() >= db_it.get_storage_size()) {
                 return render_error("id larger than amount in storage", concept_str);
             }
 
-            return result_container(closest(db_it, amount, concept_id));
+            return result_container(closest(db_it, amount, concept_id.get_n()));
         } else if(qtype == "matching") {
             if(weighted) {
                 return render_error("matching cannot be weighted", "weighted");
@@ -613,7 +653,13 @@ result_container parse_input(const std::string & input)
             }
 
             const std::vector<std::string> trait_strs(std::begin(pieces) + qtype_pos + 1, std::end(pieces));
-            const std::vector<std::size_t> trait_positions { get_number_from_str(trait_strs) };
+            std::vector<number_container> trait_positions(std::begin(trait_strs), std::end(trait_strs));
+            for(number_container & n :  trait_positions) {
+                if(! n.parse()) {
+                    return n.err();
+                }
+            }
+
             {
                 check_result check { positions_smaller_than_width_check(db_it, trait_positions) };
                 if(! check) {
@@ -621,7 +667,7 @@ result_container parse_input(const std::string & input)
                 }
             }
 
-            return result_container(matching(db_it, trait_positions));
+            return result_container(matching(db_it, unpack(trait_positions)));
         } else if(qtype == "matchingx") {
             if(async) {
                 return render_error("matchingx cannot be async", "async");
@@ -641,9 +687,21 @@ result_container parse_input(const std::string & input)
                 }
             }
 
-            const std::size_t amount { static_cast<std::size_t>(std::stoi(pieces[qtype_pos + 1], nullptr)) };
+            const std::string & amount_str { pieces[qtype_pos + 1] };
+
+            number_container amount(amount_str);
+            if(! amount.parse()) {
+                return amount.err();
+            }
+
             const std::vector<std::string> trait_strs(std::begin(pieces) + qtype_pos + 2, std::end(pieces));
-            const std::vector<std::size_t> trait_positions { get_number_from_str(trait_strs) };
+            std::vector<number_container> trait_positions(std::begin(trait_strs), std::end(trait_strs));
+            for(number_container & n :  trait_positions) {
+                if(! n.parse()) {
+                    return n.err();
+                }
+            }
+
             {
                 check_result check { positions_smaller_than_width_check(db_it, trait_positions) };
                 if(! check) {
@@ -651,7 +709,7 @@ result_container parse_input(const std::string & input)
                 }
             }
 
-            return result_container(matchingx(db_it, amount, trait_positions));
+            return result_container(matchingx(db_it, amount.get_n(), unpack(trait_positions)));
         } else {
             return render_error("bad syntax", command);
         }
