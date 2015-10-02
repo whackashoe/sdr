@@ -6,4 +6,13 @@ implement saving, loading
 
 matchingx doesnt seem to work
 
-deal with numbers too large for stoi
+implement:
+
+get CONCEPTID... # grab concepts by id
+set CONCEPTID TRAITS...
+unset CONCEPTID TRAITS...
+
+keep sockets open throughout connection
+
+use ; rather than \n for end of line crap
+
