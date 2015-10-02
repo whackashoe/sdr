@@ -5,7 +5,6 @@
 #include <cctype>
 #include <locale>
 #include <sstream>
-#include <unordered_map>
 #include <chrono>
 #include <utility>
 #include <cstdint>
@@ -18,6 +17,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <sparsehash/dense_hash_map>
 #include <libsocket/exception.hpp>
 #include <libsocket/unixclientstream.hpp>
 #include <libsocket/unixserverstream.hpp>
@@ -34,7 +34,10 @@
 
 
 bool verbose { false };
-std::unordered_map<std::string, db_container> databases;
+template <typename T, typename U>
+using hash_map = google::dense_hash_map<T, U, std::hash<T>>;
+
+hash_map<std::string, db_container> databases;
 
 std::string tolower(const std::string & s)
 {
@@ -846,6 +849,8 @@ void display_version()
 
 int main(int argc, char ** argv)
 {
+    databases.set_empty_key("");
+
     std::string bindpath { "/tmp/sdrdb.sock" };
     bool daemonize { false };
     {
