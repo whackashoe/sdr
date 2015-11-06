@@ -78,7 +78,7 @@ std::vector<std::size_t> unpack(const std::vector<number_container> & v)
     ret.reserve(v.size());
 
     for(auto & i : v) {
-        ret.push_back(i.get_n());
+        ret.emplace_back(i.get_n());
     }
 
     return ret;
@@ -323,7 +323,7 @@ result_container parse_input(const std::string & input)
             const std::string & trimmed { trim(piece) };
 
             if(! trimmed.empty()) {
-                pieces.push_back(trimmed);
+                pieces.emplace_back(trimmed);
             }
         }
     }

@@ -234,7 +234,7 @@ void parse_help(const std::string & str)
             const std::string & trimmed { trim(piece) };
 
             if(! trimmed.empty()) {
-                pieces.push_back(trimmed);
+                pieces.emplace_back(trimmed);
             }
         }
     }

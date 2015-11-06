@@ -40,10 +40,10 @@ int main()
             std::vector<sdr::position_t> data;
 
             for(std::size_t j=0; j<amount_set; ++j) {
-                data.push_back(wdis(gen));
+                data.emplace_back(wdis(gen));
             }
 
-            fields.push_back(data);
+            fields.emplace_back(data);
         }
 
         auto end = since_epoch();
@@ -91,12 +91,12 @@ int main()
         std::vector<std::future<std::vector<std::pair<sdr::position_t, std::size_t>>>> futures;
 
         for(sdr::position_t i=0; i < ParallelAmount; ++i) {
-            futures.push_back(memory.async_closest(i, 2));
+            futures.emplace_back(memory.async_closest(i, 2));
         }
 
         std::vector<std::vector<std::pair<sdr::position_t, std::size_t>>> closests;
         for(sdr::position_t i=0; i < ParallelAmount; ++i) {
-            closests.push_back(futures[i].get());
+            closests.emplace_back(futures[i].get());
         }
 
         auto end = since_epoch();
